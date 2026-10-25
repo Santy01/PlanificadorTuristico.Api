@@ -19,13 +19,15 @@ El visitante indica **días, presupuesto, punto de partida e intereses**. La int
 | Costos con total parcial y alerta de presupuesto | **Disponible** | Mostrarlos (§6.4) |
 | Fuente por atractivo | **Disponible** | Mostrarla como cita (§6.5) |
 | Rechazo de reservas, pagos, consejo médico e inyección | **Disponible** | Mostrar el mensaje (§6.6) |
-| Coordenadas | **Hoy todas `null`** (el catálogo dice `POR VERIFICAR`) | El mapa debe funcionar sin marcadores (§6.3) |
+| Coordenadas | **Disponibles** para los atractivos con coordenadas en el catálogo (`precision_coord` indica la exactitud); pueden llegar `null` | Dibujar marcadores y tolerar `null` (§6.3) |
 | Clima por día (Open-Meteo) y alternativas por lluvia | **Disponible** (requiere `fecha_inicio`) | Mostrarlo (§6.7) |
 | Ruta optimizada y trazado | **No existe aún** | Mostrar el orden recibido; preparar la capa de ruta |
 | Excluir un atractivo al recalcular | **No existe aún** | Ver §7: se recalcula reenviando parámetros |
 | Citas con fragmento (RAG) | **No existe aún** | Mostrar la fuente del catálogo; preparar el enlace |
 
 Construya la interfaz tolerando que los campos pendientes lleguen vacíos. Cuando el backend los complete, la pantalla debe mejorar sin cambios de código.
+
+> **Implementación de referencia:** el frontend ya construido con esta guía (formulario, generación, itinerario por día, mapa Leaflet y clima) se muestra en [docs/evidencias/semana-2](evidencias/semana-2/README.md).
 
 ## 2. Conexión con el backend
 
@@ -308,7 +310,7 @@ Disposición en escritorio: lista del itinerario a la izquierda y mapa a la dere
 - **Atribución obligatoria** visible en el mapa: «© OpenStreetMap contributors» y la del proveedor de teselas.
 - Un marcador numerado por actividad, con el número igual a `orden`. Color o forma distinta por día, pero sin depender solo del color.
 - Centro inicial: Ecuador central, aproximadamente `-1.25, -78.6`, con zoom 8; ajuste el encuadre a los marcadores existentes.
-- **Coordenadas ausentes (hoy todas):** si `latitud` o `longitud` es `null`, **no dibuje marcador** y muestre una advertencia junto a la actividad: «Ubicación aún no verificada». Si ninguna actividad tiene coordenadas, muestre el mapa de la zona con un aviso arriba: «Las ubicaciones de este itinerario están por verificar; el mapa se completará cuando estén disponibles».
+- **Coordenadas ausentes:** si `latitud` o `longitud` es `null`, **no dibuje marcador** y muestre una advertencia junto a la actividad: «Ubicación aún no verificada». Si ninguna actividad tiene coordenadas, muestre el mapa de la zona con un aviso arriba: «Las ubicaciones de este itinerario están por verificar; el mapa se completará cuando estén disponibles».
 - **Ruta del día:** prepare una capa de línea que una los marcadores en orden. Hoy solo se dibuja entre actividades con coordenadas. Cuando el backend entregue una ruta optimizada, se reemplaza esta línea sin cambiar la estructura.
 - El mapa debe ser operable con teclado (zoom, desplazamiento) y no ser la única forma de acceder a la información: la lista es la versión accesible equivalente.
 
