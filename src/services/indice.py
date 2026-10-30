@@ -43,6 +43,7 @@ class ConfigRAG:
     modelo: str
     top_k: int         # atractivos distintos que devuelve la recuperación
     margen: float      # se conservan los atractivos a menos de `margen` de similitud del mejor
+    activo: bool = True  # RAG_ACTIVO=false lo apaga (comparación con y sin RAG)
 
 
 def cargar_config_rag() -> ConfigRAG:
@@ -53,6 +54,7 @@ def cargar_config_rag() -> ConfigRAG:
         modelo=os.getenv("EMBEDDING_MODEL", "").strip() or "intfloat/multilingual-e5-small",
         top_k=int(os.getenv("RAG_TOP_K", "").strip() or 12),
         margen=float(os.getenv("RAG_MARGEN_SIMILITUD", "").strip() or 0.05),
+        activo=os.getenv("RAG_ACTIVO", "").strip().lower() not in ("0", "false", "no", "off"),
     )
 
 
