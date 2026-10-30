@@ -109,9 +109,9 @@ def test_construir_registros_archivo_inexistente_no_aborta():
 
 
 def test_config_rag_valores_por_defecto(monkeypatch):
-    for var in ("VECTOR_DB_PATH", "VECTOR_DB_COLECCION", "EMBEDDING_MODEL", "RAG_TOP_K", "RAG_UMBRAL_SIMILITUD"):
+    for var in ("VECTOR_DB_PATH", "VECTOR_DB_COLECCION", "EMBEDDING_MODEL", "RAG_TOP_K", "RAG_MARGEN_SIMILITUD"):
         monkeypatch.setenv(var, "")
     cfg = cargar_config_rag()
-    assert cfg.coleccion == "atractivos" and cfg.top_k == 12 and cfg.umbral == 0.3
+    assert cfg.coleccion == "atractivos" and cfg.top_k == 12 and cfg.margen == 0.05
     assert cfg.modelo == "intfloat/multilingual-e5-small"
     assert cfg.ruta.name == "vectorstore" and cfg.ruta.is_absolute()

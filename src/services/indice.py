@@ -41,8 +41,8 @@ class ConfigRAG:
     ruta: Path
     coleccion: str
     modelo: str
-    top_k: int
-    umbral: float
+    top_k: int         # atractivos distintos que devuelve la recuperación
+    margen: float      # se conservan los atractivos a menos de `margen` de similitud del mejor
 
 
 def cargar_config_rag() -> ConfigRAG:
@@ -52,7 +52,7 @@ def cargar_config_rag() -> ConfigRAG:
         coleccion=os.getenv("VECTOR_DB_COLECCION", "").strip() or "atractivos",
         modelo=os.getenv("EMBEDDING_MODEL", "").strip() or "intfloat/multilingual-e5-small",
         top_k=int(os.getenv("RAG_TOP_K", "").strip() or 12),
-        umbral=float(os.getenv("RAG_UMBRAL_SIMILITUD", "").strip() or 0.3),
+        margen=float(os.getenv("RAG_MARGEN_SIMILITUD", "").strip() or 0.05),
     )
 
 
