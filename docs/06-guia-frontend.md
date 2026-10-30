@@ -128,6 +128,7 @@ Para `intereses`, use casillas con las tres categorías del catálogo en lugar d
 | `actividades[].costo_texto` | Texto original del catálogo (p. ej. «2.00-2.50»); mostrarlo en el detalle del costo |
 | `actividades[].precision_coord` | `verificada_fuente`, `sitio_aprox`, `localidad_aprox` o `null`. Con `localidad_aprox` el punto es el centro de la localidad: muestre «Ubicación aproximada» y no lo presente como la entrada exacta |
 | `actividades[].nota` | Aclaración del catálogo (cobros en disputa, estacionalidad…); mostrarla en el detalle |
+| `actividades[].citas` | Fragmentos de fuentes que respaldan el motivo de la actividad (puede venir **vacía**: es normal y no es un error). Cada cita trae `fragmento_id`, `texto` (extracto de la fuente), `fuente`, `url`, `tipo_fuente` (`oficial (GAD)`, `prensa`, `no oficial`…) y `estado_verificacion`. Mostrarlas junto al motivo como «Fuente» con el enlace `url`; si `tipo_fuente` no es oficial, indicarlo («según prensa»). El texto lo copia el sistema de la fuente, no lo redacta el modelo |
 | `actividades[].latitud` / `longitud` | `null` significa que no se dibuja marcador (§6.3) |
 | `costo_total_usd` | Suma solo de costos conocidos; `null` si `estado` no es `ok` |
 | `costo_parcial` | `true` si hubo costos por verificar excluidos: el total es incompleto |
