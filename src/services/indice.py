@@ -2,7 +2,7 @@
 embeddings y Chroma.
 
 Regla de oro (la misma del catálogo): un fragmento solo se asocia a un atractivo si trata de él. En una página que
-cita varios atractivos, un fragmento que no nombra a ninguno se DESCARTA, antes que citarlo donde no corresponde.
+cita varios atractivos, un fragmento que no nombra a ninguno, o que empata entre varios, se DESCARTA, antes que citarlo donde no corresponde.
 
 Los imports pesados (chromadb, sentence-transformers) son perezosos: fragmentar y asignar se prueban sin cargarlos.
 """
@@ -115,21 +115,33 @@ def fragmentar(texto: str, maximo: int = MAX_CARACTERES, solape: int = SOLAPE_CA
     return fragmentos
 
 
-def nombra_a(fragmento_normalizado: str, atractivo: Atractivo) -> bool:
-    """¿El fragmento nombra al atractivo? Deben aparecer TODAS las palabras distintivas de su nombre
-    (sin tildes ni mayúsculas, sin las genéricas como «cascada» o «parque»)."""
-    palabras = set(fragmento_normalizado.split())
+def menciones(fragmento_normalizado: str, atractivo: Atractivo) -> int:
+    """Cuántas veces se nombra al atractivo (0 si falta alguna de las palabras distintivas de su nombre, sin
+    tildes ni mayúsculas y sin las genéricas como «cascada» o «parque»): la palabra distintiva menos repetida."""
+    palabras = fragmento_normalizado.split()
     distintivas = [t for t in normalizar(atractivo.nombre).split() if t not in GENERICAS and len(t) > 2]
-    return bool(distintivas) and all(t in palabras for t in distintivas)
+    if not distintivas:
+        return 0
+    return min(palabras.count(t) for t in distintivas)
+
+
+def nombra_a(fragmento_normalizado: str, atractivo: Atractivo) -> bool:
+    """¿El fragmento nombra al atractivo? Deben aparecer TODAS las palabras distintivas de su nombre."""
+    return menciones(fragmento_normalizado, atractivo) > 0
 
 
 def asignar(fragmento: str, candidatos: list[Atractivo]) -> list[Atractivo]:
-    """Atractivos a los que pertenece el fragmento. Con un solo candidato la página es de ese atractivo; con
-    varios, solo los que el fragmento nombra (puede ser ninguno: el fragmento se descarta)."""
+    """Atractivos a los que pertenece el fragmento. Con un solo candidato la página es de ese atractivo. Con
+    varios, el fragmento es del atractivo del que MÁS habla: una página de prensa que lista varios atractivos
+    nombra a todos en el mismo párrafo, y citarlo para el que solo aparece de pasada respaldaría lo que no dice.
+    Si dos atractivos empatan o ninguno es nombrado, el fragmento se descarta."""
     if len(candidatos) == 1:
         return candidatos
     norm = normalizar(fragmento)
-    return [a for a in candidatos if nombra_a(norm, a)]
+    cuentas = sorted(((menciones(norm, a), a) for a in candidatos), key=lambda x: -x[0])
+    if cuentas[0][0] == 0 or (len(cuentas) > 1 and cuentas[1][0] == cuentas[0][0]):
+        return []
+    return [cuentas[0][1]]
 
 
 # ---------------------------------------------------------------- registros

@@ -39,7 +39,7 @@ def main() -> None:
         filas, catalogo, lambda ruta: (RAIZ / ruta).read_text(encoding="utf-8"))
     sin_web = sorted(set(catalogo) - est.atractivos_con_web)
     print(f"Fragmentos: {est.fragmentos}  {est.por_clase}")
-    print(f"Descartados (página con varios atractivos y el fragmento no nombra a ninguno): {est.descartados}")
+    print(f"Descartados (página con varios atractivos y el fragmento no nombra a ninguno o empata entre varios): {est.descartados}")
     print(f"Atractivos con al menos un fragmento web: {len(est.atractivos_con_web)} de {len(catalogo)} "
           f"(solo ficha: {len(sin_web)})")
     if est.sin_texto:

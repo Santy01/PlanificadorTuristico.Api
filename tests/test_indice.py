@@ -64,8 +64,13 @@ def test_asignar_con_un_solo_candidato_no_filtra():
     assert asignar("texto que ni menciona el nombre", [PAILON]) == [PAILON]
 
 
-def test_asignar_con_varios_candidatos_solo_los_nombrados():
-    assert asignar("Visite el Pailón del Diablo y la laguna de Quilotoa.", [PAILON, NARIZ, QUILOTOA]) == [PAILON, QUILOTOA]
+def test_asignar_con_varios_candidatos_solo_el_que_mas_se_nombra():
+    texto = "El Pailón del Diablo es famoso. El Pailón del Diablo tiene un mirador. También hay una laguna Quilotoa."
+    assert asignar(texto, [PAILON, NARIZ, QUILOTOA]) == [PAILON]
+
+
+def test_asignar_descarta_el_fragmento_si_dos_atractivos_empatan():
+    assert asignar("Visite el Pailón del Diablo y la laguna de Quilotoa.", [PAILON, NARIZ, QUILOTOA]) == []
     assert asignar("Un párrafo general sobre turismo.", [PAILON, NARIZ, QUILOTOA]) == []
 
 
