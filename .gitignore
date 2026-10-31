@@ -28,6 +28,7 @@ data/raw/*
 *.db
 qdrant_storage/
 chroma/
+data/vectorstore/
 
 # Editor / SO
 .vscode/

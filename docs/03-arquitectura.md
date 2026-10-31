@@ -59,7 +59,7 @@ flowchart LR
 | Guardrails | Rechazar fuera de alcance; defensa ante prompt injection; verificar salida | Reglas + validación contra catálogo |
 | Agente | Decide qué herramienta invocar, con límite de pasos y herramientas de solo lectura | Alcance controlado |
 | RAG | Recupera fragmentos y construye citas | No se implementa en Semana 1 |
-| Base vectorial | Almacena embeddings de fragmentos y metadatos de fuente | Opción a definir (p. ej., Qdrant, Chroma o pgvector) |
+| Base vectorial | Almacena embeddings de fragmentos y metadatos de fuente | **Chroma** en modo local persistente (`data/vectorstore/`); ver decisión en la sección 3 |
 | Catálogo | Fuente de verdad de los atractivos permitidos | `data/catalogo/atractivos.csv` |
 | API de clima | Pronóstico por coordenadas y fecha | Proveedor por definir y verificar términos |
 | Servicio de mapas | Teselas, geocodificación del punto de partida | Preferir opción abierta con atribución |
@@ -137,8 +137,8 @@ sequenceDiagram
 
 | Tema | Opciones | Fecha límite sugerida |
 |---|---|---|
-| Base vectorial | Qdrant, Chroma, pgvector | Semana 2 |
-| Modelo de embeddings multilingüe | Por evaluar con textos en español | Semana 2 |
+| Base vectorial | ~~Qdrant, Chroma, pgvector~~ → **Decidido: Chroma** (local, sin servidor; ~140 atractivos y pocos cientos de fragmentos no justifican un servicio aparte) | Semana 3 |
+| Modelo de embeddings multilingüe | Candidato inicial: `intfloat/multilingual-e5-small` (local, sentence-transformers). Se compara con `bge-m3` en la evaluación de recuperación (recall@k) con `eval/entradas_prompts.csv` | Semana 3 |
 | API de clima | Open-Meteo, OpenWeatherMap, otra | Semana 2 |
 | Servicio de mapas y rutas | OpenStreetMap + OSRM/OpenRouteService, otro | Semana 2 |
 | Framework del frontend | Por definir | Semana 2 |

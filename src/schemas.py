@@ -56,7 +56,33 @@ class ItinerarioModelo(Estricto):
     supuestos: list[str] = Field(description="Lo que se asumió y el visitante debe confirmar")
 
 
+class AtractivoCitado(AtractivoElegido):
+    citas: list[str] = Field(description="Ids de los fragmentos (p. ej. «f2») que respaldan el motivo; [] si ninguno aplica")
+
+
+class DiaConCitas(Estricto):
+    numero: int
+    atractivos: list[AtractivoCitado] = Field(description="En el orden de visita")
+
+
+class ItinerarioConCitas(ItinerarioModelo):
+    """Igual que ItinerarioModelo, pero cada atractivo puede citar fragmentos del RAG. Es un esquema aparte porque
+    el modo estricto exige todos los campos: así el flujo sin RAG sigue pidiendo exactamente lo mismo que antes."""
+    dias: list[DiaConCitas]
+
+
 # ---------------------------------------------------------------- SALIDA AL CLIENTE
+class Cita(BaseModel):
+    """Fragmento de una fuente que respalda una actividad. Lo arma el CÓDIGO con el fragmento recuperado:
+    el modelo solo elige el id, nunca escribe el texto, la fuente ni la URL."""
+    fragmento_id: str
+    texto: str
+    fuente: str
+    url: str
+    tipo_fuente: str  # oficial (GAD), prensa, no oficial…
+    estado_verificacion: str
+
+
 class Actividad(BaseModel):
     orden: int
     atractivo_id: str
@@ -77,6 +103,7 @@ class Actividad(BaseModel):
     nota: str | None
     latitud: float | None  # None = sin marcador en el mapa (HU-03)
     longitud: float | None
+    citas: list[Cita] = []  # fragmentos del RAG que respaldan el motivo (puede venir vacía)
 
 
 class Clima(BaseModel):

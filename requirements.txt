@@ -5,3 +5,6 @@ httpx>=0.27
 pytest>=8.0
 openai>=1.50       # cliente único para Groq (API compatible con OpenAI)
 pydantic>=2.7      # esquemas y validación de la salida del modelo
+chromadb>=0.5          # base vectorial local y persistente (RAG)
+sentence-transformers>=3.0  # embeddings multilingües locales
+pypdf>=4.0              # extracción de texto de PDF oficiales (corpus RAG)
