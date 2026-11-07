@@ -8,3 +8,8 @@ itinerario:
 
 recalcular:
   holgura_h: 0.5                # el reemplazo puede durar como mucho lo que el atractivo que sale + esta holgura
+
+agente:
+  max_iter: 6                   # vueltas máximas del bucle por solicitud; al llegar, responde «lo revisa un asesor»
+  confirmacion_ttl_min: 15      # minutos que una acción pendiente espera la decisión del visitante
+  max_historial: 6              # turnos previos de la conversación que se reenvían al modelo (tokens)
