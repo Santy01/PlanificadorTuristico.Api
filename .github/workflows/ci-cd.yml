@@ -68,12 +68,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Los secretos llegan por variables de entorno (no se interpolan en el script) y sin \r: si se cargaron
+      # desde Windows con finales de línea CRLF, ssh rechazaría la llave con «invalid format».
       - name: Preparar SSH
+        env:
+          LLAVE: ${{ secrets.VPS_SSH_KEY }}
+          HUELLA: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
           install -m 700 -d ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          printf '%s\n' "$LLAVE" | tr -d '\r' > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          printf '%s\n' "$HUELLA" | tr -d '\r' > ~/.ssh/known_hosts
 
       # Se sube lo que la imagen necesita (las carpetas que copia el Dockerfile) y los datos versionados.
       # El .env y el índice (data/vectorstore) viven en el servidor y no se tocan.
