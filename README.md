@@ -22,6 +22,8 @@ Proyecto académico: constructor de itinerarios con mapa que utiliza RAG y un ag
 │   └── evidencias/
 │       ├── semana-1/
 │       └── semana-2/         # capturas de API + frontend
+├── config/
+│   └── parametros.yaml       # parámetros de negocio (jornada, holgura del reemplazo…), fuera del código
 ├── data/
 │   ├── raw/                  # documentos fuente descargados (no versionados)
 │   └── catalogo/
@@ -31,11 +33,14 @@ Proyecto académico: constructor de itinerarios con mapa que utiliza RAG y un ag
 │   ├── main.py               # FastAPI: /health, POST /itinerario y /itinerario/stream
 │   ├── config.py             # lee .env (Groq / simulado)
 │   ├── catalogo.py           # carga el catálogo verificado
+│   ├── parametros.py         # lee y valida config/parametros.yaml
 │   ├── schemas.py            # entrada validada y esquema JSON del modelo
 │   ├── services/
 │   │   ├── clima.py          # Open-Meteo con degradación controlada
 │   │   ├── llm.py            # ClienteLLM: reintentos, 429, timeout, respaldo, log
 │   │   └── itinerario.py     # el modelo propone, el código dispone
+│   ├── tools/
+│   │   └── recalcular.py     # herramienta determinista: reemplaza un atractivo (lluvia, cerrado, preferencia)
 │   └── prompts/              # system_v1.md … v3.md
 ├── scripts/                  # primera_llamada, probar_itinerario, comparar_prompts, demo_429, servidor_simulado
 ├── eval/entradas_prompts.csv # 10 entradas de evaluación
