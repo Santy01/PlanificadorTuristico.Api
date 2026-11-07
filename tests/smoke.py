@@ -24,6 +24,9 @@ import urllib.request
 
 TIEMPO_MAX_S = 120  # el primer caso puede pagar un arranque en frío; con el respaldo, Gemini tarda ~13 s
 CORREO = "prueba.smoke@example.com"  # dominio reservado para ejemplos: no existe
+# Los itinerarios gastan ~6 000 de los 8 000 tokens por minuto del plan gratuito de Groq. Sin esta pausa, la propia
+# prueba agotaba la cuota justo antes del agente (primera corrida en producción, 7 nov 2026: caso 7 con 503).
+PAUSA_ANTES_DEL_AGENTE_S = 20
 
 
 def normalizar(texto: str) -> str:
@@ -106,6 +109,9 @@ def main(base: str) -> int:
          lambda d: que(isinstance(d, dict) and "detail" in d, "sin detalle del error"))
 
     itinerario = memoria.get("itinerario")
+    if itinerario is not None:
+        print(f"      (pausa de {PAUSA_ANTES_DEL_AGENTE_S} s para no agotar la cuota por minuto del proveedor)", flush=True)
+        time.sleep(PAUSA_ANTES_DEL_AGENTE_S)
     if itinerario is None:
         print("OMITE 7 y 8: sin itinerario del caso 2 no se puede conversar con el agente")
         resultados += [(False, 0.0), (False, 0.0)]

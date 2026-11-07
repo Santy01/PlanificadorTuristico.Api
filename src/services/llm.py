@@ -127,6 +127,28 @@ def adaptar_esquema(esquema: dict, dialecto: str) -> dict:
     return resolver(esquema)
 
 
+# Gemini 3 exige una thought_signature en CADA tool_call del historial, también en los que generó otro modelo. Cuando
+# Groq agota su cuota a mitad de una conversación del agente, el historial trae tool_calls de Groq sin firma y Gemini
+# respondía 400 (producción, 7 nov 2026). Google documenta esta firma ficticia para historiales de otro origen.
+FIRMA_FICTICIA_GEMINI = "skip_thought_signature_validator"
+
+
+def adaptar_mensajes(mensajes: list[dict], dialecto: str) -> list[dict]:
+    """Los mensajes que recibe cada proveedor. Para Gemini, los tool_calls sin firma propia llevan la ficticia; las firmas
+    reales se conservan. No modifica la lista original (el agente la sigue usando)."""
+    if dialecto != "gemini":
+        return mensajes
+    def con_firma(tc: dict) -> dict:
+        firma = ((tc.get("extra_content") or {}).get("google") or {}).get("thought_signature")
+        if firma:
+            return tc
+        extra = dict(tc.get("extra_content") or {})
+        extra["google"] = {**(extra.get("google") or {}), "thought_signature": FIRMA_FICTICIA_GEMINI}
+        return {**tc, "extra_content": extra}
+    return [{**m, "tool_calls": [con_firma(tc) for tc in m["tool_calls"]]}
+            if m.get("role") == "assistant" and m.get("tool_calls") else m for m in mensajes]
+
+
 def formato_json(esquema: type[BaseModel], dialecto: str) -> dict:
     """response_format con el esquema del modelo Pydantic, adaptado al dialecto del proveedor."""
     return {"response_format": {"type": "json_schema", "json_schema": {
@@ -263,7 +285,7 @@ class ClienteLLM:
         """`extra` puede depender del proveedor: el esquema JSON y las tools se adaptan a su dialecto."""
         for p in self.proveedores:
             try:
-                r, ms, intentos = self._llamar(p, mensajes, extra(p) if callable(extra) else extra)
+                r, ms, intentos = self._llamar(p, adaptar_mensajes(mensajes, p.esquema), extra(p) if callable(extra) else extra)
                 return p, r, ms, intentos
             except _FalloProveedor:
                 continue
@@ -332,7 +354,7 @@ class ClienteLLM:
             t0 = time.monotonic()
             try:
                 flujo = self._clientes[p.nombre].chat.completions.create(
-                    model=p.modelo, messages=completos, stream=True, max_tokens=self.config.max_tokens, **opciones)
+                    model=p.modelo, messages=adaptar_mensajes(completos, p.esquema), stream=True, max_tokens=self.config.max_tokens, **opciones)
                 for trozo in flujo:
                     if trozo.choices and trozo.choices[0].delta.content:
                         enviados += 1
