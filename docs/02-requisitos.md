@@ -1,6 +1,6 @@
 # Requisitos
 
-**Versión:** 0.1 (Semana 1)
+**Versión:** 0.2 (Entrega 3) · Cambios en la sección 3.
 
 ## 1. Historias de usuario
 
@@ -67,7 +67,7 @@ Como responsable del sistema quiero que rechace solicitudes fuera del alcance pa
 - Dado que el usuario pide reservar o pagar, cuando envía la solicitud, entonces el sistema explica que no puede hacerlo.
 - Dado que pide un atractivo que no está en el catálogo, cuando consulta, entonces responde que no tiene información verificada y no inventa.
 - Dado que pide consejo médico o de seguridad, cuando consulta, entonces remite a fuentes oficiales.
-- Dado un texto que intenta alterar las instrucciones del sistema, cuando se procesa, entonces se ignora la instrucción.
+- Dado un texto que intenta alterar las instrucciones del sistema, cuando se procesa, entonces la instrucción no se sigue y la solicitud se rechaza con un motivo (alineado con RNF-07).
 
 ### HU-10 · Administrar el catálogo (S)
 Como administrador quiero actualizar atractivos y su estado de verificación para mantener la calidad de datos.
@@ -103,3 +103,9 @@ Como visitante con dispositivo móvil o tecnología de apoyo quiero usar la apli
 | RNF-14 | Mantenibilidad | Cobertura de pruebas unitarias ≥ 70 % en módulos de lógica | Informe de cobertura |
 | RNF-15 | Trazabilidad | Cada itinerario registra versión del catálogo y fuentes usadas | Inspección de registros |
 | RNF-16 | Idioma | Interfaz y respuestas en español | Revisión manual |
+
+## 3. Cambios
+
+| Versión | Cambio | Motivo |
+|---|---|---|
+| 0.2 | HU-09: ante un intento de alterar las instrucciones, la solicitud **se rechaza** (antes: «se ignora la instrucción») | Contradecía RNF-07 («100 % de los casos adversarios … son rechazados»). La evaluación de la Entrega 3 lo detectó en el caso S10; el equipo decidió mantener RNF-07. Ver [evidencias/semana-3/evaluacion-entrega3.md](evidencias/semana-3/evaluacion-entrega3.md) |
