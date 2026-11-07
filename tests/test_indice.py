@@ -114,9 +114,18 @@ def test_construir_registros_archivo_inexistente_no_aborta():
 
 
 def test_config_rag_valores_por_defecto(monkeypatch):
-    for var in ("VECTOR_DB_PATH", "VECTOR_DB_COLECCION", "EMBEDDING_MODEL", "RAG_TOP_K", "RAG_MARGEN_SIMILITUD"):
+    for var in ("VECTOR_DB_PATH", "VECTOR_DB_COLECCION", "EMBEDDING_MODEL", "RAG_TOP_K", "RAG_MARGEN_SIMILITUD",
+                "RAG_SIMILITUD_MINIMA", "RAG_SIMILITUD_MINIMA_PREGUNTA"):
         monkeypatch.setenv(var, "")
     cfg = cargar_config_rag()
     assert cfg.coleccion == "atractivos" and cfg.top_k == 12 and cfg.margen == 0.05
+    assert cfg.minimo == 0.83 and cfg.minimo_pregunta == 0.86
     assert cfg.modelo == "intfloat/multilingual-e5-small"
     assert cfg.ruta.name == "vectorstore" and cfg.ruta.is_absolute()
+
+
+def test_config_rag_pisos_desde_el_entorno(monkeypatch):
+    monkeypatch.setenv("RAG_SIMILITUD_MINIMA", "0.8")
+    monkeypatch.setenv("RAG_SIMILITUD_MINIMA_PREGUNTA", "0.9")
+    cfg = cargar_config_rag()
+    assert cfg.minimo == 0.8 and cfg.minimo_pregunta == 0.9

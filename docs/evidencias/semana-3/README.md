@@ -46,3 +46,18 @@ Las 10 entradas, una vez por modo. La entrada 6 (4 días, 3 intereses) falló en
 - La calidad de las citas se midió por validez de id, no revisando una muestra a mano. Falta esa revisión.
 - 10 entradas, una corrida por modo: la variación del modelo no está medida.
 - No se comparó `bge-m3` ni otro modelo de embeddings.
+
+## 5. Piso de similitud (Entrega 3)
+
+Antes, `buscar()` nunca decía «nada se parece»: una solicitud de Galápagos recibía igual los atractivos «más parecidos»
+de la zona centro como candidatos prioritarios. Ahora hay un piso absoluto, además del margen. Se calibró con
+`python scripts/evaluar_rag.py calibracion` (resultados en `eval/calibracion_piso.json`; detalle en `docs/07-rag.md` §9.1):
+
+| Tipo de consulta | Zona (mín–máx) | Fuera (mín–máx) | Piso | Conserva zona | Corta fuera |
+|---|---|---|---|---|---|
+| Solicitud de itinerario | 0.832–0.930 | 0.806–0.858 | 0.83 | 21/21 | 6/14 |
+| Pregunta concreta (agente) | 0.882–0.933 | 0.791–0.834 | 0.86 | 6/6 | 5/5 |
+
+- En las solicitudes, los grupos **se solapan**: «natural» solo (0.838) puntúa igual que «playas de Galápagos» (0.839).
+  El piso corta lo ajeno al turismo; los otros destinos los sigue rechazando el modelo (`fuera_de_alcance`).
+- El recall de la sección 1 se mantiene en 8/8 con el piso activo.

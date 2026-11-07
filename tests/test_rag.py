@@ -80,6 +80,34 @@ def test_margen_descarta_los_muy_lejanos_al_mejor():
     assert c.recuperar(solicitud(), CATALOGO).atractivo_ids == [PAILON.id, NARIZ.id]
 
 
+def test_bajo_el_piso_nada_se_parece_y_no_es_una_falla():
+    # «playas de Galápagos»: devuelve igual lo más parecido de la zona, pero bajo el piso no cuenta como recuperado
+    c, _ = cliente([(PAILON, .82, "web"), (NARIZ, .81, "web")])
+    res = c.recuperar(solicitud(notas="playas de Galápagos"), CATALOGO)
+    assert res.disponible and res.fragmentos == [] and res.atractivo_ids == []
+    assert res.mejor_puntaje == .82
+
+
+def test_justo_en_el_piso_si_cuenta():
+    c, _ = cliente([(PAILON, CFG.minimo, "web")])
+    assert c.recuperar(solicitud(), CATALOGO).atractivo_ids == [PAILON.id]
+
+
+def test_el_piso_recorta_lo_que_el_margen_dejaba_pasar():
+    # mejor .86, margen .05 → el margen dejaría hasta .81; el piso (.83) deja fuera a QUILOTOA
+    filas = [(PAILON, .86, "web"), (NARIZ, .84, "web"), (QUILOTOA, .82, "web")]
+    c, _ = cliente(filas)
+    res = c.recuperar(solicitud(), CATALOGO)
+    assert res.atractivo_ids == [PAILON.id, NARIZ.id] and res.mejor_puntaje == .86
+
+
+def test_piso_de_pregunta_por_parametro():
+    # una pregunta concreta usa un piso más alto: .85 vale para una solicitud, no para una pregunta
+    c, _ = cliente([(PAILON, .85, "web")])
+    assert c.buscar("¿Qué playas hay en Galápagos?", CATALOGO).atractivo_ids == [PAILON.id]
+    assert c.buscar("¿Qué playas hay en Galápagos?", CATALOGO, minimo=CFG.minimo_pregunta).atractivo_ids == []
+
+
 def test_respeta_top_k():
     filas = [(PAILON, .90, "web"), (NARIZ, .899, "web"), (QUILOTOA, .898, "web")]
     c, _ = ClienteRAG(ConfigRAG(Path("."), "t", "m", top_k=2, margen=.5), ModeloFalso(), ColeccionFalsa(filas)), None
