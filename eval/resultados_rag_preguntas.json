@@ -1,0 +1,131 @@
+{
+  "acierto": 1.0,
+  "silencio": 1.0,
+  "catalogo": 130,
+  "casos": [
+    {
+      "id": "P01",
+      "con_fuente": true,
+      "fallas": [],
+      "devueltos": [
+        "cascada-pailon-del-diablo"
+      ]
+    },
+    {
+      "id": "P02",
+      "con_fuente": true,
+      "fallas": [],
+      "devueltos": [
+        "tren-ecuador-nariz-del-diablo",
+        "tren-ecuador-nariz-del-diablo"
+      ]
+    },
+    {
+      "id": "P03",
+      "con_fuente": true,
+      "fallas": [],
+      "devueltos": [
+        "hornado-de-riobamba"
+      ]
+    },
+    {
+      "id": "P04",
+      "con_fuente": true,
+      "fallas": [],
+      "devueltos": [
+        "laguna-de-quilotoa",
+        "laguna-de-quilotoa"
+      ]
+    },
+    {
+      "id": "P05",
+      "con_fuente": true,
+      "fallas": [],
+      "devueltos": [
+        "carnaval-de-guaranda",
+        "museo-del-carnaval-guaranda"
+      ]
+    },
+    {
+      "id": "P06",
+      "con_fuente": true,
+      "fallas": [],
+      "devueltos": [
+        "salasaca-artesania-textil"
+      ]
+    },
+    {
+      "id": "P07",
+      "con_fuente": true,
+      "fallas": [],
+      "devueltos": [
+        "cascada-cabellera-de-la-virgen",
+        "cascada-cabellera-de-la-virgen",
+        "termas-de-la-virgen",
+        "termas-de-la-virgen"
+      ]
+    },
+    {
+      "id": "P08",
+      "con_fuente": true,
+      "fallas": [],
+      "devueltos": [
+        "chugchucaras-de-latacunga",
+        "chugchucaras-de-latacunga",
+        "mote-con-chicharron-de-latacunga",
+        "mote-con-chicharron-de-latacunga"
+      ]
+    },
+    {
+      "id": "P09",
+      "con_fuente": true,
+      "fallas": [],
+      "devueltos": [
+        "parque-nacional-cotopaxi",
+        "parque-nacional-cotopaxi",
+        "volcan-cotopaxi-y-refugio-jose-rivas"
+      ]
+    },
+    {
+      "id": "P10",
+      "con_fuente": true,
+      "fallas": [],
+      "devueltos": [
+        "alfombras-de-guano",
+        "alfombras-de-guano"
+      ]
+    },
+    {
+      "id": "P11",
+      "con_fuente": true,
+      "fallas": [],
+      "devueltos": [
+        "quesos-y-chocolates-de-salinas"
+      ]
+    },
+    {
+      "id": "P12",
+      "con_fuente": false,
+      "fallas": [],
+      "devueltos": []
+    },
+    {
+      "id": "P13",
+      "con_fuente": false,
+      "fallas": [],
+      "devueltos": []
+    },
+    {
+      "id": "P14",
+      "con_fuente": false,
+      "fallas": [],
+      "devueltos": []
+    },
+    {
+      "id": "P15",
+      "con_fuente": false,
+      "fallas": [],
+      "devueltos": []
+    }
+  ]
+}

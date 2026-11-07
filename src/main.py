@@ -63,6 +63,15 @@ def obtener_catalogo() -> dict[str, Atractivo]:
     return con_ubicacion(cargar_catalogo(RUTA_REDUCIDA if RUTA_REDUCIDA.exists() else RUTA_CATALOGO))
 
 
+@lru_cache
+def obtener_catalogo_agente() -> dict[str, Atractivo]:
+    """Catálogo COMPLETO con ubicación para el agente. El reducido existe para ahorrar tokens en el prompt del
+    itinerario; las herramientas del agente nunca envían el catálogo al modelo, así que no hay razón para recortarlo.
+    Con el reducido, «¿qué horario tiene el Pailón?» no encontraba nada (el Pailón no está en él) y recalcular tenía
+    la mitad de candidatos (hallazgo de la evaluación de la Entrega 3)."""
+    return con_ubicacion(cargar_catalogo(RUTA_CATALOGO))
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -91,7 +100,7 @@ def obtener_pendientes() -> AlmacenPendientes:
 
 @app.post("/agente", response_model=RespuestaAgente)
 def agente(sol: SolicitudAgente, llm: ClienteLLM = Depends(obtener_llm),
-           catalogo: dict[str, Atractivo] = Depends(obtener_catalogo),
+           catalogo: dict[str, Atractivo] = Depends(obtener_catalogo_agente),
            clima: ClienteClima = Depends(obtener_clima), rag: ClienteRAG | None = Depends(obtener_rag),
            pendientes: AlmacenPendientes = Depends(obtener_pendientes)):
     """Conversa sobre un itinerario ya generado: lo ajusta (recalcular), consulta clima y fuentes. Si el agente

@@ -11,7 +11,9 @@ from fastapi.testclient import TestClient
 
 import src.agente as ag
 from src.catalogo import cargar_catalogo
-from src.main import app, obtener_catalogo, obtener_clima, obtener_llm, obtener_pendientes, obtener_rag
+from src.main import (
+    app, obtener_catalogo_agente, obtener_clima, obtener_llm, obtener_pendientes, obtener_rag,
+)
 from src.parametros import parametros
 from src.schemas import (
     AtractivoElegido, Clima, DiaModelo, ItinerarioModelo, MensajeChat, SolicitudAgente, SolicitudItinerario,
@@ -169,7 +171,7 @@ def test_D_rechazar_no_ejecuta(almacen, bandeja_temporal):
 
 def test_D_cada_accion_se_decide_una_sola_vez(almacen, bandeja_temporal):
     llm = LLMGuion([("enviar_itinerario", {"correo": "ana@correo.com"})], "Listo.")
-    r = correr(llm, almacen)
+    r = correr(llm, almacen, pedir("envíamelo a ana@correo.com"))
     assert ag.confirmar(llm, r.confirmacion.id, True, almacen) is not None
     assert ag.confirmar(llm, r.confirmacion.id, True, almacen) is None        # segundo clic: no reenvía
     assert len(bandeja_temporal.read_text(encoding="utf-8").splitlines()) == 1
@@ -179,14 +181,14 @@ def test_D_la_accion_pendiente_vence():
     reloj = [0.0]
     almacen = ag.AlmacenPendientes(ttl_s=10, reloj=lambda: reloj[0])
     llm = LLMGuion([("enviar_itinerario", {"correo": "ana@correo.com"})])
-    r = correr(llm, almacen)
+    r = correr(llm, almacen, pedir("envíamelo a ana@correo.com"))
     reloj[0] = 11
     assert ag.confirmar(llm, r.confirmacion.id, True, almacen) is None
 
 
 def test_D_solo_una_confirmacion_por_turno(almacen):
     llm = LLMGuion([("enviar_itinerario", {"correo": "a@b.com"}), ("enviar_itinerario", {"correo": "c@d.com"})])
-    r = correr(llm, almacen)
+    r = correr(llm, almacen, pedir("envíalo a a@b.com y a c@d.com"))
     assert r.confirmacion.argumentos == {"correo": "a@b.com"}
     _, guardado = next(iter(almacen._datos.values()))
     tools = [m for m in guardado["mensajes"] if m["role"] == "tool"]
@@ -195,9 +197,30 @@ def test_D_solo_una_confirmacion_por_turno(almacen):
 
 def test_D_si_el_modelo_cae_despues_de_aprobar_igual_se_informa(almacen, bandeja_temporal):
     llm = LLMGuion([("enviar_itinerario", {"correo": "ana@correo.com"})], ProveedorNoDisponible())
-    r = correr(llm, almacen)
+    r = correr(llm, almacen, pedir("envíamelo a ana@correo.com"))
     r2 = ag.confirmar(llm, r.confirmacion.id, True, almacen)
     assert r2.estado == "respondido" and "a***@correo.com" in r2.respuesta and bandeja_temporal.exists()
+
+
+def test_D_correo_inventado_no_llega_a_la_confirmacion(almacen, bandeja_temporal):
+    """Hallazgo de la evaluación con Groq: «Mándamelo por correo» (sin dirección) y el modelo inventó una."""
+    llm = LLMGuion([("enviar_itinerario", {"correo": "visitante@ejemplo.com"})], "¿A qué correo te lo envío?")
+    r = correr(llm, almacen, pedir("Mándamelo por correo."))
+    assert r.estado == "respondido" and r.confirmacion is None and almacen._datos == {}
+    assert "no lo escribió el visitante" in json.loads(tool_msgs(llm)[0]["content"])["error"]
+
+
+def test_D_correo_escrito_en_un_turno_anterior_vale(almacen):
+    hist = [MensajeChat(rol="visitante", texto="mi correo es Ana@Correo.com")]
+    llm = LLMGuion([("enviar_itinerario", {"correo": "ana@correo.com"})])
+    r = correr(llm, almacen, pedir("ahora sí, envíamelo", hist))
+    assert r.estado == "requiere_confirmacion"
+
+
+def test_D_un_correo_del_asistente_no_cuenta(almacen):
+    hist = [MensajeChat(rol="asistente", texto="¿Lo envío a ana@correo.com?")]
+    llm = LLMGuion([("enviar_itinerario", {"correo": "ana@correo.com"})], "Dime tu correo.")
+    assert correr(llm, almacen, pedir("sí", hist)).confirmacion is None
 
 
 # ---------------------------------------------------------------- validación y fallas
@@ -264,10 +287,10 @@ def test_historial_se_recorta(almacen):
 def api():
     estado = {"llm": None, "almacen": ag.AlmacenPendientes(ttl_s=60)}
     app.dependency_overrides.update({
-        obtener_llm: lambda: estado["llm"], obtener_catalogo: lambda: REAL, obtener_clima: lambda: None,
+        obtener_llm: lambda: estado["llm"], obtener_catalogo_agente: lambda: REAL, obtener_clima: lambda: None,
         obtener_rag: lambda: None, obtener_pendientes: lambda: estado["almacen"]})
     yield TestClient(app), estado
-    for dep in (obtener_llm, obtener_catalogo, obtener_clima, obtener_pendientes):
+    for dep in (obtener_llm, obtener_catalogo_agente, obtener_clima, obtener_pendientes):
         app.dependency_overrides.pop(dep, None)
 
 

@@ -70,6 +70,7 @@ class Contexto:
     clima: ClienteClima | None
     cambios: list[str] = field(default_factory=list)
     fuentes: dict[str, Cita] = field(default_factory=dict)
+    textos_visitante: list[str] = field(default_factory=list)  # lo que escribió el visitante (mensaje e historial)
 
 
 def _buscar(ctx: Contexto, d: t_buscar.BuscarFragmentosIn) -> BaseModel:
@@ -97,12 +98,21 @@ def _enviar(ctx: Contexto, d: t_enviar.EnviarItinerarioIn) -> BaseModel:
     return t_enviar.enviar_itinerario(d, ctx.itinerario)
 
 
+def _correo_escrito_por_el_visitante(ctx: Contexto, d: t_enviar.EnviarItinerarioIn) -> str | None:
+    """Evaluación con Groq: ante «Mándamelo por correo» (sin dirección) el modelo pidió enviar igual, con un correo
+    inventado. El destino tiene que aparecer LITERALMENTE en lo que escribió el visitante."""
+    if any(d.correo.lower() in t.lower() for t in ctx.textos_visitante):
+        return None
+    return "ese correo no lo escribió el visitante: pídele su dirección de correo antes de enviar"
+
+
 @dataclass(frozen=True)
 class Herramienta:
     entrada: type[BaseModel]
     ejecutar: Callable[[Contexto, BaseModel], BaseModel]
     esquema: dict
     describir: Callable[[Contexto, BaseModel], str] | None = None  # texto de la confirmación (si requiere OK)
+    prevalidar: Callable[[Contexto, BaseModel], str | None] | None = None  # regla de negocio: None = puede seguir
 
 
 # 1 · Lista cerrada: nombre → herramienta. Lo que no está aquí no existe para el modelo.
@@ -111,7 +121,8 @@ PERMITIDAS: dict[str, Herramienta] = {
     "consultar_clima": Herramienta(t_clima.ConsultarClimaIn, _clima, t_clima.ESQUEMA),
     "recalcular": Herramienta(t_recalcular.RecalcularIn, _recalcular, t_recalcular.ESQUEMA),
     "enviar_itinerario": Herramienta(t_enviar.EnviarItinerarioIn, _enviar, t_enviar.ESQUEMA,
-                                     describir=lambda ctx, d: t_enviar.describir(d, ctx.itinerario)),
+                                     describir=lambda ctx, d: t_enviar.describir(d, ctx.itinerario),
+                                     prevalidar=_correo_escrito_por_el_visitante),
 }
 # 3 · Confirmación: estas se detienen y esperan al visitante.
 REQUIEREN_OK = frozenset({"enviar_itinerario"})
@@ -189,6 +200,9 @@ def _atender(ll: LlamadaHerramienta, ctx: Contexto, hay_pendiente: bool, vuelta:
                    if isinstance(e, ValidationError) else ["los argumentos no son un JSON válido"])
         _auditar(evento="rechazada", motivo="argumentos_invalidos", herramienta=ll.nombre, vuelta=vuelta)
         return _json({"error": "argumentos inválidos", "detalle": detalle}), None
+    if h.prevalidar is not None and (motivo := h.prevalidar(ctx, datos)) is not None:
+        _auditar(evento="rechazada", motivo="regla_de_negocio", herramienta=ll.nombre, vuelta=vuelta)
+        return _json({"error": motivo}), None
     if ll.nombre in REQUIEREN_OK:
         if hay_pendiente:
             return _json({"error": "solo una acción con confirmación por turno"}), None
@@ -322,7 +336,8 @@ def _responder(salida: Salida, ctx: Contexto, mensajes: list[dict], almacen: Alm
 def conversar(llm: ClienteLLM, sol: SolicitudAgente, catalogo: dict[str, Atractivo], rag: ClienteRAG | None,
               clima: ClienteClima | None, almacen: AlmacenPendientes) -> RespuestaAgente:
     """Lanza ProveedorNoDisponible si el modelo no responde (el endpoint lo traduce a 503)."""
-    ctx = Contexto(itinerario=sol.itinerario, solicitud=sol.solicitud, catalogo=catalogo, rag=rag, clima=clima)
+    ctx = Contexto(itinerario=sol.itinerario, solicitud=sol.solicitud, catalogo=catalogo, rag=rag, clima=clima,
+                   textos_visitante=[sol.mensaje, *(m.texto for m in sol.historial if m.rol == "visitante")])
     mensajes = mensajes_iniciales(sol, catalogo)
     _auditar(evento="inicio", dias=len(sol.itinerario.dias), historial=len(sol.historial))
     return _responder(ejecutar_agente(llm, mensajes, ctx), ctx, mensajes, almacen)

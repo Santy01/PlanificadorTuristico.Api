@@ -61,3 +61,8 @@ de la zona centro como candidatos prioritarios. Ahora hay un piso absoluto, adem
 - En las solicitudes, los grupos **se solapan**: «natural» solo (0.838) puntúa igual que «playas de Galápagos» (0.839).
   El piso corta lo ajeno al turismo; los otros destinos los sigue rechazando el modelo (`fuera_de_alcance`).
 - El recall de la sección 1 se mantiene en 8/8 con el piso activo.
+
+## 6. Evaluación de la Entrega 3
+
+Las 15 solicitudes, las 15 preguntas y los 10 casos del agente, con su línea base, las correcciones y los resultados
+finales, están en [evaluacion-entrega3.md](evaluacion-entrega3.md).
