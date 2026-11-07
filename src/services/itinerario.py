@@ -18,6 +18,7 @@ from typing import Iterator
 from pydantic import ValidationError
 
 from src.catalogo import Atractivo
+from src.parametros import parametros
 from src.schemas import (
     Actividad, Alternativa, Cita, DiaItinerario, ItinerarioConCitas, ItinerarioModelo, RespuestaItinerario,
     SolicitudItinerario,
@@ -28,8 +29,8 @@ from src.services.rag import ClienteRAG, FragmentoRecuperado, Recuperacion
 
 PROMPT = "system_v3"      # la versión ganadora de la comparación de prompts (docs/05-prompts.md)
 PROMPT_RAG = "system_v4"  # v3 + fragmentos de fuentes y citas; solo se usa si hay fragmentos
-JORNADA_MAX_H = 8.0
-DURACION_POR_DEFECTO_H = 2.0  # cuando la duración del catálogo está POR VERIFICAR
+JORNADA_MAX_H = parametros().itinerario.jornada_max_h                    # config/parametros.yaml
+DURACION_POR_DEFECTO_H = parametros().itinerario.duracion_por_defecto_h  # cuando la duración está POR VERIFICAR
 CANDIDATOS_MIN = 24           # con RAG, el catálogo enviado se acota a max(CANDIDATOS_MIN, CANDIDATOS_POR_DIA × días)
 CANDIDATOS_POR_DIA = 6
 MAX_FRAGMENTOS_PROMPT = 5     # presupuesto de tokens: el plan gratuito de Groq limita a 8000 por minuto
@@ -153,7 +154,8 @@ def _citas_validas(pedidas: list[str], atractivo_id: str,
     return validas, descartadas
 
 
-def _fila(a: Atractivo, orden: int, motivo: str, citas: list[Cita] | None = None) -> Actividad:
+def actividad_desde(a: Atractivo, orden: int, motivo: str, citas: list[Cita] | None = None) -> Actividad:
+    """Una actividad del itinerario con los datos del CATÁLOGO (el modelo solo aporta el motivo)."""
     return Actividad(
         orden=orden, atractivo_id=a.id, nombre=a.nombre, canton=a.canton, provincia=a.provincia,
         tipo=a.tipo, motivo=motivo, duracion_h=a.duracion_h or DURACION_POR_DEFECTO_H,
@@ -196,7 +198,7 @@ def armar_itinerario(propuesta: ItinerarioModelo, s: SolicitudItinerario, catalo
             horas[destino] += dur
             citas, malas = _citas_validas(getattr(elegido, "citas", []), a.id, fragmentos or {})
             citas_malas += malas
-            dias[destino].append(_fila(a, len(dias[destino]) + 1, elegido.motivo, citas))
+            dias[destino].append(actividad_desde(a, len(dias[destino]) + 1, elegido.motivo, citas))
 
     if inventados:
         avisos.append(f"Se descartaron {inventados} atractivo(s) que no pertenecen al catálogo verificado.")
@@ -209,9 +211,8 @@ def armar_itinerario(propuesta: ItinerarioModelo, s: SolicitudItinerario, catalo
     if descartados:
         avisos.append(f"{descartados} actividad(es) no cupieron en los {s.dias} día(s) solicitados.")
 
-    resultado = [DiaItinerario(numero=n, actividades=acts, horas_total=horas[n],
-                               fecha=s.fecha_inicio + timedelta(days=n - 1) if s.fecha_inicio else None,
-                               costo_parcial_usd=sum(x.costo_usd or 0 for x in acts))
+    resultado = [DiaItinerario(numero=n, actividades=acts, horas_total=0, costo_parcial_usd=0,  # los pone totalizar
+                               fecha=s.fecha_inicio + timedelta(days=n - 1) if s.fecha_inicio else None)
                  for n, acts in dias.items()]
     actividades = [x for d in resultado for x in d.actividades]
     if not actividades:
@@ -234,15 +235,31 @@ def armar_itinerario(propuesta: ItinerarioModelo, s: SolicitudItinerario, catalo
     sin_dur = [x for x in actividades if not x.duracion_verificada]
     if sin_dur:
         avisos.append(f"Se asumieron {DURACION_POR_DEFECTO_H:g} h para {len(sin_dur)} actividad(es) sin duración verificada.")
-    total = sum(d.costo_parcial_usd for d in resultado)
-    excedido = total > s.presupuesto_usd
-    if excedido:
-        avisos.append("El costo estimado supera el presupuesto indicado; considere menos actividades o días.")
-    return RespuestaItinerario(
+    resp = RespuestaItinerario(
         estado="ok", mensaje="Itinerario generado con atractivos del catálogo verificado.",
-        dias=resultado, costo_total_usd=total, costo_parcial=bool(sin_costo), presupuesto_excedido=excedido,
-        supuestos=propuesta.supuestos, advertencias=avisos,
+        dias=resultado, supuestos=propuesta.supuestos, advertencias=avisos,
     )
+    totalizar(resp, s.presupuesto_usd)
+    return resp
+
+
+AVISO_PRESUPUESTO = "El costo estimado supera el presupuesto indicado; considere menos actividades o días."
+
+
+def totalizar(resp: RespuestaItinerario, presupuesto_usd: float | None) -> None:
+    """Recalcula horas y costo de cada día y el total. La usan armar_itinerario y la herramienta recalcular, así un
+    itinerario modificado se cuenta EXACTAMENTE igual que uno recién generado. Sin presupuesto (None) se conserva
+    la marca de presupuesto excedido que ya tenía."""
+    for d in resp.dias:
+        d.horas_total = sum(x.duracion_h for x in d.actividades)
+        d.costo_parcial_usd = sum(x.costo_usd or 0 for x in d.actividades)
+    resp.costo_total_usd = sum(d.costo_parcial_usd for d in resp.dias)
+    resp.costo_parcial = any(x.costo_usd is None for d in resp.dias for x in d.actividades)
+    if presupuesto_usd is not None:
+        resp.presupuesto_excedido = resp.costo_total_usd > presupuesto_usd
+        resp.advertencias = [w for w in resp.advertencias if w != AVISO_PRESUPUESTO]
+        if resp.presupuesto_excedido:
+            resp.advertencias.append(AVISO_PRESUPUESTO)
 
 
 MAX_ALTERNATIVAS = 3

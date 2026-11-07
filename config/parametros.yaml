@@ -1,0 +1,10 @@
+# Parámetros de negocio del planificador.
+# Viven fuera del código y del prompt: cambiarlos no exige tocar Python ni volver a probar el modelo.
+# Los valida src/parametros.py al arrancar; un valor fuera de rango detiene la API con un mensaje claro.
+
+itinerario:
+  jornada_max_h: 8.0            # horas máximas de actividades por día (HU-02)
+  duracion_por_defecto_h: 2.0   # se asume cuando la duración del catálogo está POR VERIFICAR
+
+recalcular:
+  holgura_h: 0.5                # el reemplazo puede durar como mucho lo que el atractivo que sale + esta holgura
