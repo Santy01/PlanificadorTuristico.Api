@@ -11,6 +11,10 @@ Reglas (deterministas: el mismo CSV de entrada da siempre la misma salida):
   4. Dentro de cada grupo se prefieren los mejor verificados (A > A_parcial > B > C), con mejor precisión de
      coordenadas, con costo y duración conocidos y de cantones distintos (para variedad).
 El CSV original NO se modifica.
+
+Desde el 7 de noviembre de 2026 el reducido es un conjunto VERIFICADO por el equipo (costos, duraciones y fuentes completos,
+importado con scripts/importar_catalogo.py). Estas reglas elegirían otros 4 atractivos sin verificar, así que el script no
+lo sobrescribe salvo con --forzar; para comparar, use --salida OTRO_ARCHIVO.
 """
 import argparse
 import csv
@@ -64,7 +68,11 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--total", type=int, default=60)
     ap.add_argument("--salida", type=Path, default=RUTA_REDUCIDA)
+    ap.add_argument("--forzar", action="store_true", help="sobrescribir el reducido verificado por el equipo")
     a = ap.parse_args()
+    if a.salida.resolve() == RUTA_REDUCIDA.resolve() and not a.forzar:
+        sys.exit("El reducido es el conjunto verificado por el equipo: no se sobrescribe. "
+                 "Use --salida OTRO_ARCHIVO para comparar, o --forzar si de verdad quiere reemplazarlo.")
 
     elegidos = {x.id for x in curar(a.total)}
     with open(RUTA_CATALOGO, encoding="utf-8-sig", newline="") as f:
