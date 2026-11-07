@@ -62,8 +62,27 @@ retry-after: 60
 {"detail":"Demasiadas solicitudes seguidas. Intenta de nuevo en 60 segundos."}
 ```
 
-**Gemini como respaldo:** implementado y probado con dobles (sin red): si Groq agota su cuota o tiene la clave mala,
-responde Gemini con el esquema adaptado a su dialecto; si los dos fallan, la API responde 503 con un mensaje claro.
-**Pendiente:** validarlo con Gemini real cuando esté la clave en el `.env`.
+**Gemini como respaldo.** Primero se probó con dobles, sin red: si Groq agota su cuota o tiene la clave mala, responde
+Gemini con el esquema adaptado a su dialecto; si los dos fallan, la API responde 503 con un mensaje claro. Después se
+validó con **Gemini real** (7 de noviembre de 2026), y la prueba encontró dos problemas que los dobles no podían ver:
 
-**Pruebas:** 212 pasan, con 95 % de cobertura.
+1. **Modelo retirado.** `gemini-2.5-flash` (el valor por defecto inicial) respondió 404: «no longer available to new
+   users». El modelo que Google recomienda, `gemini-3.8-flash`, dio tiempo agotado y 503 por alta demanda. Se eligió
+   **`gemini-3.5-flash`**, que respondió de forma estable; se cambia con `GEMINI_MODEL` sin tocar el código.
+2. **Firma de pensamiento.** Gemini 3 adjunta a cada pedido de herramienta un `extra_content.google.thought_signature` y
+   responde **400** en la vuelta siguiente si no se le devuelve. El agente ahora conserva y devuelve tal cual los campos
+   propios del proveedor (prueba `test_thought_signature_de_gemini_vuelve_en_la_siguiente_vuelta`).
+
+Resultado con Gemini real como proveedor:
+
+| Prueba | Resultado |
+|---|---|
+| Itinerario (esquema adaptado, con RAG) | válido: 2 días, 4 actividades, 2 citas, incluye Quilotoa · 11 s |
+| Agente con herramientas («va a llover el día 1») | `consultar_clima` → `recalcular`: sale Termas de la Virgen, entra la Basílica de Baños · 3 vueltas, sin datos sin respaldo |
+| Streaming | 12 trozos y el itinerario final válido |
+| **Respaldo real**: Groq con clave inválida | Groq da 401 (error definitivo, sin reintentos) → **responde Gemini**, itinerario válido · 13 s |
+
+Gemini tarda unos 11–13 s por itinerario (Groq, ~1 s): sirve como respaldo dentro del p95 de 20 s de RNF-01. En el
+streaming la respuesta final todavía no indica qué proveedor respondió.
+
+**Pruebas:** 214 pasan, con 95 % de cobertura.

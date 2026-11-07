@@ -33,7 +33,9 @@ CATALOGO = {
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
         "clave": "GEMINI_API_KEY",
         "modelo_env": "GEMINI_MODEL",
-        "modelo": "gemini-2.5-flash",
+        # gemini-2.5-flash ya no está disponible para cuentas nuevas y gemini-3.8-flash dio 503 por alta demanda
+        # al probarlo (7 nov 2026). Se puede cambiar sin tocar el código con GEMINI_MODEL.
+        "modelo": "gemini-3.5-flash",
         "razonamiento": False,
         "esquema": "gemini",
     },

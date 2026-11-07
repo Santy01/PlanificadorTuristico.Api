@@ -325,3 +325,23 @@ def test_estado_proveedores_nunca_muestra_la_clave(monkeypatch):
     assert "valor-ficticio" not in json.dumps(e)
     monkeypatch.setenv("LLM_RESPALDO", "")
     assert estado_proveedores()["respaldo"] is None
+
+
+def test_thought_signature_de_gemini_vuelve_en_la_siguiente_vuelta():
+    """Gemini 3 responde 400 si el tool_call vuelve sin su extra_content.google.thought_signature."""
+    from openai.types.chat import ChatCompletionMessageToolCall
+    tc = ChatCompletionMessageToolCall.model_validate({
+        "id": "c1", "type": "function", "function": {"name": "consultar_clima", "arguments": '{"dia": 1}'},
+        "extra_content": {"google": {"thought_signature": "firma"}}})
+    d = DobleTools([NS(choices=[NS(message=NS(content=None, tool_calls=[tc]), finish_reason="tool_calls")],
+                       usage=NS(prompt_tokens=1, completion_tokens=1))])
+    r = cliente(d)[0].generar_con_herramientas([], [])
+    m = r.datos.como_mensaje()
+    assert m["tool_calls"][0]["extra_content"] == {"google": {"thought_signature": "firma"}}
+    assert m["tool_calls"][0]["function"]["name"] == "consultar_clima"
+
+
+def test_sin_campos_extra_el_mensaje_no_cambia():
+    from src.services.llm import LlamadaHerramienta, MensajeModelo
+    m = MensajeModelo(None, [LlamadaHerramienta("c1", "x", "{}")]).como_mensaje()
+    assert set(m["tool_calls"][0]) == {"id", "type", "function"}

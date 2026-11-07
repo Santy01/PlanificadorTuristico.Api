@@ -147,6 +147,9 @@ class LlamadaHerramienta:
     id: str
     nombre: str
     argumentos: str  # JSON en texto, tal como lo escribió el modelo (sin validar)
+    # Campos propios del proveedor que hay que DEVOLVER tal cual en la vuelta siguiente. Gemini 3 adjunta
+    # extra_content.google.thought_signature y responde 400 si falta (prueba con Gemini real, 7 nov 2026).
+    extra: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -159,8 +162,8 @@ class MensajeModelo:
         """El mensaje `assistant` que se agrega al historial (formato Chat Completions)."""
         m: dict = {"role": "assistant", "content": self.contenido or ""}
         if self.llamadas:
-            m["tool_calls"] = [{"id": x.id, "type": "function", "function": {"name": x.nombre, "arguments": x.argumentos}}
-                               for x in self.llamadas]
+            m["tool_calls"] = [{"id": x.id, "type": "function", "function": {"name": x.nombre, "arguments": x.argumentos},
+                                **(x.extra or {})} for x in self.llamadas]
         return m
 
 
@@ -190,6 +193,12 @@ def _retry_after(error: Exception) -> float | None:
         return float(valor) if valor is not None else None
     except ValueError:
         return None
+
+
+def _extra(tool_call) -> dict | None:
+    """Campos de un tool_call que el SDK no conoce (p. ej. extra_content de Gemini), para devolverlos sin cambios."""
+    extra = getattr(tool_call, "model_extra", None)
+    return dict(extra) if extra else None
 
 
 def _limpiar_json(texto: str) -> str:
@@ -275,7 +284,7 @@ class ClienteLLM:
         p, r, ms, intentos = self._con_respaldo(
             mensajes, lambda p: {"tools": tools_para(herramientas, p.esquema), "tool_choice": "auto"})
         msg = r.choices[0].message
-        llamadas = [LlamadaHerramienta(tc.id, tc.function.name, tc.function.arguments or "{}")
+        llamadas = [LlamadaHerramienta(tc.id, tc.function.name, tc.function.arguments or "{}", _extra(tc))
                     for tc in (getattr(msg, "tool_calls", None) or [])]
         uso = getattr(r, "usage", None)
         return Resultado(MensajeModelo(msg.content, llamadas), p.nombre, p.modelo,
