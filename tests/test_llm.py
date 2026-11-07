@@ -345,3 +345,26 @@ def test_sin_campos_extra_el_mensaje_no_cambia():
     from src.services.llm import LlamadaHerramienta, MensajeModelo
     m = MensajeModelo(None, [LlamadaHerramienta("c1", "x", "{}")]).como_mensaje()
     assert set(m["tool_calls"][0]) == {"id", "type", "function"}
+
+
+def test_respaldo_a_mitad_de_conversacion_lleva_firma_a_gemini():
+    """Producción, 7 nov 2026: Groq hizo la vuelta 1 del agente, agotó la cuota en la vuelta 2 y Gemini respondió 400
+    porque los tool_calls de Groq no tienen thought_signature. Gemini debe recibirlos con la firma ficticia."""
+    from src.services.llm import FIRMA_FICTICIA_GEMINI
+    historial = [
+        {"role": "user", "content": "¿lloverá?"},
+        {"role": "assistant", "content": "", "tool_calls": [
+            {"id": "g1", "type": "function", "function": {"name": "consultar_clima", "arguments": "{}"}}]},
+        {"role": "assistant", "content": "", "tool_calls": [
+            {"id": "m1", "type": "function", "function": {"name": "recalcular", "arguments": "{}"},
+             "extra_content": {"google": {"thought_signature": "firma-real"}}}]},
+        {"role": "tool", "tool_call_id": "g1", "content": "{}"}]
+    a = DobleTools([error_http(openai.RateLimitError, 429)] * 2)
+    b = DobleTools([respuesta("Nublado, sin lluvia intensa.")])
+    r = groq_y_gemini(a, b).generar_con_herramientas(historial, [])
+    assert r.proveedor == "gemini"
+    a_groq, a_gemini = a.llamadas[0]["messages"], b.llamadas[0]["messages"]
+    assert "extra_content" not in a_groq[1]["tool_calls"][0]                     # Groq: sin cambios
+    assert a_gemini[1]["tool_calls"][0]["extra_content"]["google"]["thought_signature"] == FIRMA_FICTICIA_GEMINI
+    assert a_gemini[2]["tool_calls"][0]["extra_content"]["google"]["thought_signature"] == "firma-real"
+    assert "extra_content" not in historial[1]["tool_calls"][0]                  # el historial del agente no se toca
