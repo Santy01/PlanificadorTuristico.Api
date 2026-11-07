@@ -40,8 +40,9 @@ jobs:
         run: |
           grep -v "sentence-transformers" requirements.txt > requirements-ci.txt
           pip install -r requirements-ci.txt
-      - name: Ejecutar pruebas
-        run: python -m pytest -q
+      # Cobertura de src/: el build falla por debajo del 85 % (RNF-14 pide al menos 70 %; hoy es 95 %)
+      - name: Ejecutar pruebas con cobertura
+        run: python -m pytest -q --cov=src --cov-report=term --cov-fail-under=85
 
   imagen:
     needs: pruebas
