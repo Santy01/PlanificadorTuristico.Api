@@ -80,7 +80,8 @@ def es_generacion_fallida(e: Exception) -> bool:
     if isinstance(e, openai.APIError) and not isinstance(e, openai.APIStatusError):
         return "schema" in str(e).lower() or "failed_generation" in str(e).lower()  # error a mitad del stream
     return (isinstance(e, openai.BadRequestError)
-            and (getattr(e, "code", None) == "json_validate_failed" or "failed_generation" in str(e).lower()))
+            and (getattr(e, "code", None) in ("json_validate_failed", "tool_use_failed")  # JSON o llamada a tool mal formada
+                 or "failed_generation" in str(e).lower()))
 
 
 def _detalle(e: Exception) -> str | None:
@@ -92,6 +93,29 @@ def _detalle(e: Exception) -> str | None:
 
 ESPERA_MAXIMA_S = 20  # si el proveedor pide esperar más que esto, mejor ir al respaldo
 ESPERA_MAXIMA_SIN_RESPALDO_S = 45  # sin respaldo no hay a dónde ir: se espera más antes de rendirse
+
+
+@dataclass(frozen=True)
+class LlamadaHerramienta:
+    """Un pedido del modelo: NO es una ejecución. Ejecutarlo o no lo decide el código del agente."""
+    id: str
+    nombre: str
+    argumentos: str  # JSON en texto, tal como lo escribió el modelo (sin validar)
+
+
+@dataclass(frozen=True)
+class MensajeModelo:
+    """Respuesta del modelo en una vuelta del agente, sin tipos del SDK: el agente no depende del proveedor."""
+    contenido: str | None
+    llamadas: list[LlamadaHerramienta]
+
+    def como_mensaje(self) -> dict:
+        """El mensaje `assistant` que se agrega al historial (formato Chat Completions)."""
+        m: dict = {"role": "assistant", "content": self.contenido or ""}
+        if self.llamadas:
+            m["tool_calls"] = [{"id": x.id, "type": "function", "function": {"name": x.nombre, "arguments": x.argumentos}}
+                               for x in self.llamadas]
+        return m
 
 
 @dataclass
@@ -153,7 +177,8 @@ class ClienteLLM:
                 r = cliente.chat.completions.create(model=p.modelo, messages=mensajes, **opciones)
                 ms = int((time.monotonic() - t0) * 1000)
                 contenido = (r.choices[0].message.content or "") if r.choices else ""
-                if not contenido.strip():
+                pide_herramientas = bool(r.choices and getattr(r.choices[0].message, "tool_calls", None))
+                if not contenido.strip() and not pide_herramientas:  # pedir herramientas sin texto NO es vacío
                     raise _RespuestaVacia()
                 uso = getattr(r, "usage", None)
                 _registrar(evento="ok", proveedor=p.nombre, modelo=p.modelo, intento=intento, latencia_ms=ms,
@@ -195,6 +220,17 @@ class ClienteLLM:
         p, r, ms, intentos = self._con_respaldo([{"role": "system", "content": system}, *mensajes], {})
         uso = getattr(r, "usage", None)
         return Resultado(r.choices[0].message.content, p.nombre, p.modelo,
+                         getattr(uso, "prompt_tokens", None), getattr(uso, "completion_tokens", None), ms, intentos)
+
+    def generar_con_herramientas(self, mensajes: list[dict], herramientas: list[dict]) -> Resultado[MensajeModelo]:
+        """Una vuelta del agente: el modelo responde texto o PIDE herramientas (nunca las ejecuta).
+        `mensajes` ya incluye el system. Mismos reintentos, respaldo y registro que las demás llamadas."""
+        p, r, ms, intentos = self._con_respaldo(mensajes, {"tools": herramientas, "tool_choice": "auto"})
+        msg = r.choices[0].message
+        llamadas = [LlamadaHerramienta(tc.id, tc.function.name, tc.function.arguments or "{}")
+                    for tc in (getattr(msg, "tool_calls", None) or [])]
+        uso = getattr(r, "usage", None)
+        return Resultado(MensajeModelo(msg.content, llamadas), p.nombre, p.modelo,
                          getattr(uso, "prompt_tokens", None), getattr(uso, "completion_tokens", None), ms, intentos)
 
     def generar_json(self, system: str, usuario: str, esquema: type[T]) -> Resultado[T]:

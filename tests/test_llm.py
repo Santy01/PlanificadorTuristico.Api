@@ -191,3 +191,41 @@ def test_stream_con_error_inesperado_emite_evento_error_y_no_excepcion():
 def test_sin_respaldo_espera_mas_antes_de_rendirse():
     c, esperas = cliente(Doble([error_http(openai.RateLimitError, 429, {"retry-after": "30"}), BUENA]))
     assert c.generar_json("sys", "peticion", ItinerarioModelo).intentos == 2 and 30 <= esperas[0] <= 30.5
+
+
+# ---------------------------------------------------------------- agente: herramientas
+def respuesta_con_tools(*llamadas):
+    tcs = [NS(id=f"c{i}", function=NS(name=n, arguments=a)) for i, (n, a) in enumerate(llamadas)]
+    return NS(choices=[NS(message=NS(content=None, tool_calls=tcs), finish_reason="tool_calls")],
+              usage=NS(prompt_tokens=10, completion_tokens=5))
+
+
+class DobleTools(Doble):
+    def _create(self, **kw):
+        self.llamadas.append(kw)
+        paso = self.guion.pop(0)
+        if isinstance(paso, Exception):
+            raise paso
+        return paso
+
+
+def test_pedir_herramientas_sin_texto_no_es_respuesta_vacia():
+    d = DobleTools([respuesta_con_tools(("recalcular", '{"dia": 1}'))])
+    r = cliente(d)[0].generar_con_herramientas([{"role": "user", "content": "x"}], [{"type": "function"}])
+    assert r.intentos == 1 and r.datos.contenido is None
+    assert [(x.id, x.nombre, x.argumentos) for x in r.datos.llamadas] == [("c0", "recalcular", '{"dia": 1}')]
+    assert d.llamadas[0]["tools"] == [{"type": "function"}] and d.llamadas[0]["tool_choice"] == "auto"
+
+
+def test_herramientas_reintenta_y_pasa_al_respaldo():
+    a = DobleTools([error_http(openai.RateLimitError, 429)] * 3)
+    b = DobleTools([respuesta(None), respuesta_con_tools(("consultar_clima", "{}"))])  # vacía: se reintenta
+    r = cliente(a, b)[0].generar_con_herramientas([], [])
+    assert r.proveedor == "b" and r.datos.llamadas[0].nombre == "consultar_clima"
+
+
+def test_mensaje_assistant_con_tool_calls():
+    from src.services.llm import LlamadaHerramienta, MensajeModelo
+    m = MensajeModelo(None, [LlamadaHerramienta("c1", "recalcular", "{}")]).como_mensaje()
+    assert m == {"role": "assistant", "content": "", "tool_calls": [
+        {"id": "c1", "type": "function", "function": {"name": "recalcular", "arguments": "{}"}}]}
