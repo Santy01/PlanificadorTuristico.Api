@@ -36,6 +36,10 @@ GENERICAS = {
 }
 
 
+SIMILITUD_MINIMA = 0.83
+SIMILITUD_MINIMA_PREGUNTA = 0.86
+
+
 @dataclass(frozen=True)
 class ConfigRAG:
     ruta: Path
@@ -44,6 +48,10 @@ class ConfigRAG:
     top_k: int         # atractivos distintos que devuelve la recuperación
     margen: float      # se conservan los atractivos a menos de `margen` de similitud del mejor
     activo: bool = True  # RAG_ACTIVO=false lo apaga (comparación con y sin RAG)
+    # Pisos ABSOLUTOS: si el mejor resultado no los alcanza, la recuperación vuelve vacía («nada se parece»).
+    # El margen responde «cuántos»; el piso responde «si alguno». Calibrados en docs/07-rag.md, sección 10.
+    minimo: float = SIMILITUD_MINIMA                    # solicitud de itinerario (intereses + notas)
+    minimo_pregunta: float = SIMILITUD_MINIMA_PREGUNTA  # pregunta concreta sobre un atractivo (agente)
 
 
 def cargar_config_rag() -> ConfigRAG:
@@ -55,6 +63,8 @@ def cargar_config_rag() -> ConfigRAG:
         top_k=int(os.getenv("RAG_TOP_K", "").strip() or 12),
         margen=float(os.getenv("RAG_MARGEN_SIMILITUD", "").strip() or 0.05),
         activo=os.getenv("RAG_ACTIVO", "").strip().lower() not in ("0", "false", "no", "off"),
+        minimo=float(os.getenv("RAG_SIMILITUD_MINIMA", "").strip() or SIMILITUD_MINIMA),
+        minimo_pregunta=float(os.getenv("RAG_SIMILITUD_MINIMA_PREGUNTA", "").strip() or SIMILITUD_MINIMA_PREGUNTA),
     )
 
 

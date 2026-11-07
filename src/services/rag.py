@@ -8,7 +8,10 @@ Cómo se elige (búsqueda híbrida):
   2. Similitud semántica entre la consulta y los fragmentos.
   3. Se agrupa por ATRACTIVO: un atractivo con muchos fragmentos parecidos no puede ocupar todos los lugares
      (con E5 las similitudes salen muy juntas y sin esto un volcán desplazaba al tren de la Nariz del Diablo).
-  4. Se conservan los atractivos a menos de `margen` de similitud del mejor, hasta `top_k`.
+  4. Piso absoluto: si el mejor atractivo no alcanza `minimo`, la recuperación vuelve VACÍA («nada se parece»)
+     y el itinerario sigue con el catálogo, sin citas. Sin piso, una solicitud de Galápagos o de París recibía igual
+     los atractivos «más parecidos» de la zona centro como candidatos prioritarios.
+  5. Se conservan los atractivos a menos de `margen` de similitud del mejor (y nunca bajo el piso), hasta `top_k`.
 """
 from __future__ import annotations
 
@@ -45,6 +48,7 @@ class Recuperacion:
     fragmentos: list[FragmentoRecuperado] = field(default_factory=list)
     disponible: bool = True
     motivo: str | None = None   # por qué no está disponible
+    mejor_puntaje: float | None = None  # similitud del mejor atractivo, aunque haya quedado bajo el piso (diagnóstico)
 
     @property
     def atractivo_ids(self) -> list[str]:
@@ -89,8 +93,10 @@ class ClienteRAG:
             return False
 
     def buscar(self, consulta: str, catalogo: dict[str, Atractivo],
-               tipos: set[str] | None = None) -> Recuperacion:
+               tipos: set[str] | None = None, minimo: float | None = None) -> Recuperacion:
+        """`minimo` reemplaza al piso de la configuración (p. ej. `cfg.minimo_pregunta` para una pregunta concreta)."""
         self._preparar()
+        piso_absoluto = self.cfg.minimo if minimo is None else minimo
         k = self.cfg.top_k
         filtro = {"tipo": {"$in": sorted(tipos)}} if tipos else None
         emb = vectorizar(self._modelo, self.cfg, [consulta], consulta=True)
@@ -110,8 +116,13 @@ class ClienteRAG:
         # Chroma devuelve los resultados ordenados; cada lista ya queda de mejor a peor fragmento.
         ordenados = sorted(por_atractivo.values(), key=lambda fs: -fs[0].puntaje)
         mejor = ordenados[0][0].puntaje
-        elegidos = [fs for fs in ordenados if fs[0].puntaje >= mejor - self.cfg.margen][:k]
-        return Recuperacion(fragmentos=[f for fs in elegidos for f in fs[:MAX_FRAGMENTOS_POR_ATRACTIVO]])
+        if mejor < piso_absoluto:
+            log.info("rag_bajo_piso mejor=%.4f piso=%.4f", mejor, piso_absoluto)
+            return Recuperacion(mejor_puntaje=mejor)
+        piso = max(mejor - self.cfg.margen, piso_absoluto)
+        elegidos = [fs for fs in ordenados if fs[0].puntaje >= piso][:k]
+        return Recuperacion(fragmentos=[f for fs in elegidos for f in fs[:MAX_FRAGMENTOS_POR_ATRACTIVO]],
+                            mejor_puntaje=mejor)
 
     def recuperar(self, s: SolicitudItinerario, catalogo: dict[str, Atractivo],
                   tipos: set[str] | None = None) -> Recuperacion:
@@ -122,6 +133,7 @@ class ClienteRAG:
         except Exception as e:  # noqa: BLE001 — respaldo final: el RAG jamás debe hacer fallar la solicitud
             log.warning("rag_fallo", exc_info=True)
             return no_disponible(f"{type(e).__name__}: {e}")
-        log.info("rag_ok atractivos=%d fragmentos=%d ms=%.0f", len(res.atractivo_ids), len(res.fragmentos),
+        log.info("rag_ok atractivos=%d fragmentos=%d mejor=%s ms=%.0f", len(res.atractivo_ids), len(res.fragmentos),
+                 f"{res.mejor_puntaje:.4f}" if res.mejor_puntaje is not None else "-",
                  (time.perf_counter() - inicio) * 1000)
         return res

@@ -92,7 +92,10 @@ Principio rector, el mismo de todo el proyecto: **el modelo propone, el código 
 2. Se filtra por tipo de atractivo (natural, cultural, gastronómico) según los intereses.
 3. Se buscan los `top_k × 4` fragmentos más cercanos y se descarta cualquier id que no esté en el catálogo verificado.
 4. Se **agrupa por atractivo** (máximo 2 fragmentos por atractivo). Sin esto, un volcán con tres fragmentos parecidos ocupaba todos los lugares y desplazaba al tren de la Nariz del Diablo.
-5. Se conservan los atractivos cuya similitud está a menos de `margen` (0.05) del mejor, hasta `top_k` (12).
+5. **Piso absoluto:** si el mejor atractivo no alcanza `minimo` (0.83), la recuperación vuelve **vacía** («nada se parece»). El itinerario sigue con el catálogo, sin citas y sin advertencia, porque el RAG no falló. Las preguntas concretas (las del agente) usan un piso más alto, `minimo_pregunta` (0.86), que se pasa con `buscar(..., minimo=...)`.
+6. Se conservan los atractivos cuya similitud está a menos de `margen` (0.05) del mejor, **y nunca bajo el piso**, hasta `top_k` (12).
+
+El margen responde «¿cuántos?»; el piso responde «¿alguno?». La calibración está en la sección 9.1.
 
 **Regla de oro:** `recuperar` **nunca lanza excepciones**. Si falta el índice, no carga el modelo o falla Chroma, devuelve «no disponible» y el itinerario se genera como antes, con una advertencia.
 
@@ -106,6 +109,8 @@ Principio rector, el mismo de todo el proyecto: **el modelo propone, el código 
 | `EMBEDDING_MODEL` | `intfloat/multilingual-e5-small` | Modelo de embeddings |
 | `RAG_TOP_K` | `12` | Máximo de atractivos recuperados |
 | `RAG_MARGEN_SIMILITUD` | `0.05` | Margen respecto al mejor resultado |
+| `RAG_SIMILITUD_MINIMA` | `0.83` | Piso absoluto para una solicitud de itinerario |
+| `RAG_SIMILITUD_MINIMA_PREGUNTA` | `0.86` | Piso absoluto para una pregunta concreta (agente) |
 
 ## 7. Integración en el itinerario
 
@@ -129,10 +134,28 @@ Principio rector, el mismo de todo el proyecto: **el modelo propone, el código 
 
 | Qué | Dónde | Resultado |
 |---|---|---|
-| Pruebas unitarias | [tests/test_indice.py](../tests/test_indice.py), [tests/test_rag.py](../tests/test_rag.py), [tests/test_itinerario_rag.py](../tests/test_itinerario_rag.py) | 104 pruebas en total pasan (con modelo y Chroma simulados) |
-| Evaluación | [scripts/evaluar_rag.py](../scripts/evaluar_rag.py), [docs/evidencias/semana-3/README.md](evidencias/semana-3/README.md) | Recall 8/8 en recuperación; con Groq 16 citas válidas y 0 descartadas |
+| Pruebas unitarias | [tests/test_indice.py](../tests/test_indice.py), [tests/test_rag.py](../tests/test_rag.py), [tests/test_itinerario_rag.py](../tests/test_itinerario_rag.py) | 109 pruebas en total pasan (con modelo y Chroma simulados) |
+| Evaluación | [scripts/evaluar_rag.py](../scripts/evaluar_rag.py), [docs/evidencias/semana-3/README.md](evidencias/semana-3/README.md) | Recall 8/8 en recuperación (también con el piso); con Groq 16 citas válidas y 0 descartadas |
+| Calibración del piso | `python scripts/evaluar_rag.py calibracion` → [eval/calibracion_piso.json](../eval/calibracion_piso.json) | Ver 9.1 |
 
 Las pruebas no cargan el modelo ni el índice real: `tests/conftest.py` los reemplaza por un RAG nulo.
+
+### 9.1 Calibración del piso de similitud
+
+Los grupos se escribieron antes de mirar los puntajes. Se mide el mejor puntaje de cada consulta con el índice real:
+
+| Grupo | Consultas | Mejor puntaje (mín–máx) |
+|---|---|---|
+| Solicitudes de la zona (con nombres y genéricas, p. ej. solo «natural») | 21 | 0.832 – 0.930 |
+| Solicitudes de fuera (otros destinos y temas ajenos) | 14 | 0.806 – 0.858 |
+| Preguntas de la zona («¿Qué horario tiene el Pailón del Diablo?») | 6 | 0.882 – 0.933 |
+| Preguntas de fuera («¿Qué playas hay en Galápagos?») | 5 | 0.791 – 0.834 |
+
+**Solicitudes: los grupos se solapan.** Una solicitud genérica de la zona («natural», 0.838) puntúa igual que «playas de Galápagos» (0.839). La consulta siempre incluye los intereses («natural, …»), que se parecen a todo el corpus. No existe un piso que separe ambos grupos. Se eligió **0.83**, que conserva 21/21 solicitudes de la zona y corta 6/14 de fuera: las totalmente ajenas al turismo (Python, París, Madrid, consejo médico, recetas). El margen con la solicitud válida más baja es pequeño (0.832), pero un corte equivocado es barato: el itinerario sale igual, solo que sin citas. Los otros destinos turísticos (Galápagos, Cuenca, Montañita) **no** los detiene el piso: los rechaza el modelo con `fuera_de_alcance` (HU-09).
+
+**Preguntas: separación limpia.** Sin los intereses delante, la pregunta lleva la señal completa. Con **0.86** se conservan 6/6 y se cortan 5/5. Este es el piso que usará la herramienta `buscar_fragmentos` del agente.
+
+Con E5 las similitudes salen altas y juntas: si se cambia el modelo de embeddings o se reindexa el corpus, hay que volver a correr la calibración.
 
 ## 10. Resumen: para qué sirve cada pieza
 
