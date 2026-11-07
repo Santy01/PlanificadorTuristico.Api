@@ -92,6 +92,16 @@ class ClienteRAG:
             log.warning("rag_precalentar_fallo", exc_info=True)
             return False
 
+    def fragmentos_indexados(self) -> int | None:
+        """Para /health: cuántos fragmentos tiene el índice. No carga el modelo ni abre Chroma si no se precalentó
+        (la salud debe responder rápido) y nunca lanza: None = no se sabe."""
+        if self._coleccion is None:
+            return None
+        try:
+            return int(self._coleccion.count())
+        except Exception:  # noqa: BLE001
+            return None
+
     def buscar(self, consulta: str, catalogo: dict[str, Atractivo],
                tipos: set[str] | None = None, minimo: float | None = None) -> Recuperacion:
         """`minimo` reemplaza al piso de la configuración (p. ej. `cfg.minimo_pregunta` para una pregunta concreta)."""

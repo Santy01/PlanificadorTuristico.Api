@@ -34,10 +34,18 @@ class ParamsAgente(_Seccion):
     max_historial: int = Field(ge=0, le=20)
 
 
+class ParamsLimites(_Seccion):
+    ventana_s: float = Field(gt=0, le=3600)
+    itinerario: int = Field(ge=1, le=10_000)
+    agente: int = Field(ge=1, le=10_000)
+    proxies_confiables: int = Field(ge=0, le=5)
+
+
 class Parametros(_Seccion):
     itinerario: ParamsItinerario
     recalcular: ParamsRecalcular
     agente: ParamsAgente
+    limites: ParamsLimites
 
 
 class ErrorParametros(RuntimeError):

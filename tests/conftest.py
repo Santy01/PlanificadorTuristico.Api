@@ -16,3 +16,18 @@ def sin_rag_real():
     yield
     if puesto:
         app.dependency_overrides.pop(obtener_rag, None)
+
+
+@pytest.fixture(autouse=True)
+def sin_limite_de_peticiones():
+    """Las pruebas hacen muchas solicitudes desde la misma IP: se usa un límite holgado, salvo en
+    tests/test_limites.py, que pone el suyo."""
+    from src.limites import LimitadorPorIP
+    from src.main import app, obtener_limitadores
+    puesto = obtener_limitadores not in app.dependency_overrides
+    if puesto:
+        holgados = {"itinerario": LimitadorPorIP(10_000, 60), "agente": LimitadorPorIP(10_000, 60)}
+        app.dependency_overrides[obtener_limitadores] = lambda: holgados
+    yield
+    if puesto:
+        app.dependency_overrides.pop(obtener_limitadores, None)

@@ -7,10 +7,12 @@ import logging
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
-from fastapi import Depends, FastAPI, HTTPException, Path
+from fastapi import Depends, FastAPI, HTTPException, Path, Request
 from fastapi.responses import StreamingResponse
 
 from src.agente import AlmacenPendientes, confirmar, conversar
+from src.config import estado_proveedores
+from src.limites import LimitadorPorIP, ip_cliente
 from src.catalogo import RUTA_CATALOGO, RUTA_REDUCIDA, Atractivo, cargar_catalogo, con_ubicacion
 from src.parametros import parametros
 from src.schemas import DecisionAgente, RespuestaAgente, RespuestaItinerario, SolicitudAgente, SolicitudItinerario
@@ -73,11 +75,37 @@ def obtener_catalogo_agente() -> dict[str, Atractivo]:
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health(rag: ClienteRAG | None = Depends(obtener_rag)) -> dict:
+    """Responde rápido y SIN llamar al modelo: si el proveedor está caído, la app sigue viva y lo puede decir.
+    Informa qué está listo (índice, proveedores configurados), nunca el valor de una clave."""
+    return {
+        "status": "ok",
+        "version": app.version,
+        "rag": {"activo": rag is not None, "fragmentos": rag.fragmentos_indexados() if rag is not None else None},
+        "modelo": estado_proveedores(),
+    }
 
 
-@app.post("/itinerario", response_model=RespuestaItinerario)
+@lru_cache
+def obtener_limitadores() -> dict[str, LimitadorPorIP]:
+    lim = parametros().limites
+    return {"itinerario": LimitadorPorIP(lim.itinerario, lim.ventana_s),
+            "agente": LimitadorPorIP(lim.agente, lim.ventana_s)}
+
+
+def limitar(grupo: str):
+    """Dependencia: 429 con Retry-After si la IP pasó su cupo en la ventana (config/parametros.yaml → limites)."""
+    def dependencia(request: Request, limitadores: dict[str, LimitadorPorIP] = Depends(obtener_limitadores)) -> None:
+        ip = ip_cliente(request.headers.get("x-forwarded-for"), request.client.host if request.client else None,
+                        parametros().limites.proxies_confiables)
+        permitido, espera = limitadores[grupo].permitir(ip)
+        if not permitido:
+            raise HTTPException(status_code=429, headers={"Retry-After": str(espera)},
+                                detail=f"Demasiadas solicitudes seguidas. Intenta de nuevo en {espera} segundos.")
+    return dependencia
+
+
+@app.post("/itinerario", response_model=RespuestaItinerario, dependencies=[Depends(limitar("itinerario"))])
 def itinerario(solicitud: SolicitudItinerario, llm: ClienteLLM = Depends(obtener_llm),
                catalogo: dict[str, Atractivo] = Depends(obtener_catalogo),
                clima: ClienteClima = Depends(obtener_clima), rag: ClienteRAG | None = Depends(obtener_rag)):
@@ -98,7 +126,7 @@ def obtener_pendientes() -> AlmacenPendientes:
     return AlmacenPendientes(ttl_s=parametros().agente.confirmacion_ttl_min * 60)
 
 
-@app.post("/agente", response_model=RespuestaAgente)
+@app.post("/agente", response_model=RespuestaAgente, dependencies=[Depends(limitar("agente"))])
 def agente(sol: SolicitudAgente, llm: ClienteLLM = Depends(obtener_llm),
            catalogo: dict[str, Atractivo] = Depends(obtener_catalogo_agente),
            clima: ClienteClima = Depends(obtener_clima), rag: ClienteRAG | None = Depends(obtener_rag),
@@ -111,7 +139,7 @@ def agente(sol: SolicitudAgente, llm: ClienteLLM = Depends(obtener_llm),
         raise HTTPException(status_code=503, detail=e.mensaje_usuario)
 
 
-@app.post("/agente/confirmar/{id_accion}", response_model=RespuestaAgente)
+@app.post("/agente/confirmar/{id_accion}", response_model=RespuestaAgente, dependencies=[Depends(limitar("agente"))])
 def agente_confirmar(decision: DecisionAgente, id_accion: str = Path(max_length=64),
                      llm: ClienteLLM = Depends(obtener_llm),
                      pendientes: AlmacenPendientes = Depends(obtener_pendientes)):
@@ -122,7 +150,7 @@ def agente_confirmar(decision: DecisionAgente, id_accion: str = Path(max_length=
     return r
 
 
-@app.post("/itinerario/stream")
+@app.post("/itinerario/stream", dependencies=[Depends(limitar("itinerario"))])
 def itinerario_stream(solicitud: SolicitudItinerario, llm: ClienteLLM = Depends(obtener_llm),
                       catalogo: dict[str, Atractivo] = Depends(obtener_catalogo),
                       clima: ClienteClima = Depends(obtener_clima), rag: ClienteRAG | None = Depends(obtener_rag)):
