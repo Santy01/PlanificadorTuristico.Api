@@ -229,3 +229,99 @@ def test_mensaje_assistant_con_tool_calls():
     m = MensajeModelo(None, [LlamadaHerramienta("c1", "recalcular", "{}")]).como_mensaje()
     assert m == {"role": "assistant", "content": "", "tool_calls": [
         {"id": "c1", "type": "function", "function": {"name": "recalcular", "arguments": "{}"}}]}
+
+
+# ---------------------------------------------------------------- Gemini como respaldo (Semana 4)
+from src.config import CATALOGO, ErrorConfiguracion, cargar_config, estado_proveedores  # noqa: E402
+from src.services.llm import adaptar_esquema, formato_json, tools_para  # noqa: E402
+
+
+def groq_y_gemini(a, b, razonamiento="low"):
+    cfg = Config(principal=Proveedor("groq", "u", "k", "gpt-oss-20b", True, "estricto"),
+                 respaldo=Proveedor("gemini", "u", "k", "gemini-flash", False, "gemini"),
+                 timeout_s=5, max_tokens=100, reintentos=2, razonamiento=razonamiento)
+    return ClienteLLM(cfg, clientes={"groq": a, "gemini": b}, dormir=lambda s: None)
+
+
+def test_si_groq_agota_la_cuota_responde_gemini_con_su_dialecto():
+    a = Doble([error_http(openai.RateLimitError, 429)] * 2)
+    b = Doble([BUENA])
+    r = groq_y_gemini(a, b).generar_json("sys", "peticion", ItinerarioModelo)
+    assert r.proveedor == "gemini" and r.datos.dias[0].numero == 1
+    esquema_groq = a.llamadas[0]["response_format"]["json_schema"]["schema"]
+    esquema_gemini = b.llamadas[0]["response_format"]["json_schema"]["schema"]
+    assert "$defs" in esquema_groq and "$defs" not in json.dumps(esquema_gemini)
+
+
+def test_reasoning_effort_solo_a_quien_lo_admite():
+    a = Doble([error_http(openai.AuthenticationError, 401)])   # clave mala: pasa directo al respaldo
+    b = Doble([BUENA])
+    groq_y_gemini(a, b).generar_json("sys", "p", ItinerarioModelo)
+    assert a.llamadas[0]["reasoning_effort"] == "low" and "reasoning_effort" not in b.llamadas[0]
+    assert len(a.llamadas) == 1                                  # error definitivo: sin reintentos
+
+
+def test_agente_con_gemini_recibe_las_mismas_herramientas_adaptadas():
+    from src.agente import ESQUEMAS
+    a = DobleTools([error_http(openai.InternalServerError, 503)] * 2)
+    b = DobleTools([respuesta_con_tools(("recalcular", '{"dia": 1}'))])
+    r = groq_y_gemini(a, b).generar_con_herramientas([{"role": "user", "content": "x"}], ESQUEMAS)
+    assert r.proveedor == "gemini" and r.datos.llamadas[0].nombre == "recalcular"
+    enviados = b.llamadas[0]["tools"]
+    assert [h["function"]["name"] for h in enviados] == [h["function"]["name"] for h in ESQUEMAS]
+    assert "additionalProperties" not in json.dumps(enviados) and a.llamadas[0]["tools"] is ESQUEMAS
+
+
+def test_los_dos_caidos_da_proveedor_no_disponible():
+    a = Doble([error_http(openai.RateLimitError, 429)] * 2)
+    b = Doble([error_http(openai.RateLimitError, 429)] * 2)
+    with pytest.raises(ProveedorNoDisponible):
+        groq_y_gemini(a, b).generar_json("sys", "p", ItinerarioModelo)
+
+
+def test_adaptar_esquema_gemini_resuelve_referencias_y_nulos():
+    e = adaptar_esquema(ItinerarioModelo.model_json_schema(), "gemini")
+    texto = json.dumps(e)
+    for clave in ("$ref", "$defs", "title", "additionalProperties", "anyOf"):
+        assert clave not in texto
+    assert e["properties"]["motivo_rechazo"] == {
+        "type": "string", "nullable": True, "description": ItinerarioModelo.model_fields["motivo_rechazo"].description}
+    atractivo = e["properties"]["dias"]["items"]["properties"]["atractivos"]["items"]
+    assert set(atractivo["required"]) == {"id", "motivo"}
+    assert adaptar_esquema({"a": 1}, "estricto") == {"a": 1}
+    with pytest.raises(ValueError):
+        adaptar_esquema({}, "otro")
+
+
+def test_formato_y_tools_sin_cambios_para_groq():
+    assert formato_json(ItinerarioModelo, "estricto")["response_format"]["json_schema"]["schema"] == \
+        ItinerarioModelo.model_json_schema()
+    h = [{"type": "function", "function": {"name": "x", "parameters": {"title": "T", "type": "object"}}}]
+    assert tools_para(h, "estricto") is h and tools_para(h, "gemini")[0]["function"]["parameters"] == {"type": "object"}
+
+
+def test_config_gemini_como_respaldo(monkeypatch):
+    monkeypatch.setenv("LLM_PRINCIPAL", "groq")
+    monkeypatch.setenv("GROQ_API_KEY", "gsk-prueba")
+    monkeypatch.setenv("LLM_RESPALDO", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "")
+    with pytest.raises(ErrorConfiguracion, match="GEMINI_API_KEY"):
+        cargar_config()                                          # sin clave: se detiene al arrancar
+    monkeypatch.setenv("GEMINI_API_KEY", "clave-de-prueba")
+    monkeypatch.setenv("GEMINI_MODEL", "")
+    c = cargar_config()
+    assert c.respaldo.nombre == "gemini" and c.respaldo.modelo == CATALOGO["gemini"]["modelo"]
+    assert c.respaldo.base_url.startswith("https://generativelanguage.googleapis.com")
+    assert not c.respaldo.admite_razonamiento and c.respaldo.esquema == "gemini"
+
+
+def test_estado_proveedores_nunca_muestra_la_clave(monkeypatch):
+    monkeypatch.setenv("LLM_PRINCIPAL", "groq")
+    monkeypatch.setenv("GROQ_API_KEY", "valor-ficticio")
+    monkeypatch.setenv("LLM_RESPALDO", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "")
+    e = estado_proveedores()
+    assert e["principal"]["configurado"] and not e["respaldo"]["configurado"]
+    assert "valor-ficticio" not in json.dumps(e)
+    monkeypatch.setenv("LLM_RESPALDO", "")
+    assert estado_proveedores()["respaldo"] is None
