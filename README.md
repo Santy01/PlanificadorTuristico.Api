@@ -30,7 +30,8 @@ Proyecto académico: constructor de itinerarios con mapa que utiliza RAG y un ag
 │       ├── atractivos.csv
 │       └── README.md
 ├── src/
-│   ├── main.py               # FastAPI: /health, POST /itinerario y /itinerario/stream
+│   ├── main.py               # FastAPI: /health, /itinerario, /itinerario/stream, /agente y /agente/confirmar/{id}
+│   ├── agente.py             # agente de alcance controlado: lista cerrada, tope y confirmación
 │   ├── config.py             # lee .env (Groq / simulado)
 │   ├── catalogo.py           # carga el catálogo verificado
 │   ├── parametros.py         # lee y valida config/parametros.yaml
@@ -40,8 +41,11 @@ Proyecto académico: constructor de itinerarios con mapa que utiliza RAG y un ag
 │   │   ├── llm.py            # ClienteLLM: reintentos, 429, timeout, respaldo, log
 │   │   └── itinerario.py     # el modelo propone, el código dispone
 │   ├── tools/
-│   │   └── recalcular.py     # herramienta determinista: reemplaza un atractivo (lluvia, cerrado, preferencia)
-│   └── prompts/              # system_v1.md … v3.md
+│   │   ├── recalcular.py     # reemplaza un atractivo (lluvia, cerrado, preferencia) con reglas fijas
+│   │   ├── buscar_fragmentos.py  # busca en las fuentes con el piso de similitud para preguntas
+│   │   ├── consultar_clima.py    # pronóstico de un día del itinerario
+│   │   └── enviar_itinerario.py  # requiere confirmación del visitante (envío simulado)
+│   └── prompts/              # system_v1.md … v4.md y agente_v1.md
 ├── scripts/                  # primera_llamada, probar_itinerario, comparar_prompts, demo_429, servidor_simulado
 ├── eval/entradas_prompts.csv # 10 entradas de evaluación
 └── tests/
