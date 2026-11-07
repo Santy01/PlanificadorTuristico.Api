@@ -22,8 +22,10 @@ El visitante indica **días, presupuesto, punto de partida e intereses**. La int
 | Coordenadas | **Disponibles** para los atractivos con coordenadas en el catálogo (`precision_coord` indica la exactitud); pueden llegar `null` | Dibujar marcadores y tolerar `null` (§6.3) |
 | Clima por día (Open-Meteo) y alternativas por lluvia | **Disponible** (requiere `fecha_inicio`) | Mostrarlo (§6.7) |
 | Ruta optimizada y trazado | **No existe aún** | Mostrar el orden recibido; preparar la capa de ruta |
-| Excluir un atractivo al recalcular | **No existe aún** | Ver §7: se recalcula reenviando parámetros |
-| Citas con fragmento (RAG) | **No existe aún** | Mostrar la fuente del catálogo; preparar el enlace |
+| Cambiar un atractivo (lluvia, cerrado, preferencia) | **Disponible** con el agente (`POST /agente`) | Panel de conversación y botón «Cambiar» (§7.1) |
+| Preguntas sobre los atractivos, con fuente | **Disponible** con el agente | Mostrar respuesta y `fuentes` (§7.1) |
+| Enviar el itinerario por correo, con confirmación | **Disponible** (modo simulado) | Tarjeta Aprobar / Rechazar (§7.2) |
+| Citas con fragmento (RAG) | **Disponible** en `citas` de cada actividad | Mostrar el fragmento y su fuente (§6.5) |
 
 Construya la interfaz tolerando que los campos pendientes lleguen vacíos. Cuando el backend los complete, la pantalla debe mejorar sin cambios de código.
 
@@ -45,6 +47,8 @@ Construya la interfaz tolerando que los campos pendientes lleguen vacíos. Cuand
 | `GET /health` | Comprobar que la API responde: `{"status": "ok"}` |
 | `POST /itinerario` | Itinerario completo en una sola respuesta JSON |
 | `POST /itinerario/stream` | El mismo itinerario, con texto en vivo por SSE |
+| `POST /agente` | Conversar sobre un itinerario ya generado: ajustarlo, preguntar, enviarlo (§7.1) |
+| `POST /agente/confirmar/{id}` | Aprobar o rechazar la acción pendiente del agente (§7.2) |
 
 ## 3. Petición y respuesta
 
@@ -381,6 +385,52 @@ Hoy el recálculo se hace **reenviando la petición** con los parámetros cambia
 - Si cambia el número de días, el nuevo itinerario debe tener exactamente ese total; compruébelo y avise si no coincide.
 - **Excluir un atractivo:** la API todavía no admite una lista de exclusiones. Mientras tanto, ofrezca el botón «Quitar» en cada actividad, pero impleméntelo como **solicitud de recálculo con una nota** («No incluir: Nombre») en el campo `notas`, e informe al usuario de que el resultado puede variar. Cuando el backend agregue un campo de exclusión (por ejemplo `excluir: ["atractivo_id"]`), cambie solo esa llamada.
 - Mantenga las peticiones cortas: un solo recálculo en curso a la vez; cancele el anterior con `AbortController` si el usuario envía otro.
+
+Para cambiar **un** atractivo (no rehacer el viaje) use el agente (§7.1): el reemplazo lo elige el código con reglas fijas y el resto del itinerario no cambia.
+
+### 7.1 Conversar con el agente (`POST /agente`)
+
+La API **no guarda la conversación**: en cada mensaje la interfaz envía el itinerario actual y, si quiere, los turnos anteriores.
+
+```json
+{
+  "mensaje": "Va a llover el día 1, cambia lo que sea al aire libre",
+  "itinerario": { "...": "la RespuestaItinerario actual, tal como la devolvió la API" },
+  "solicitud": { "...": "los parámetros originales (SolicitudItinerario): se usa el presupuesto" },
+  "historial": [ { "rol": "visitante", "texto": "..." }, { "rol": "asistente", "texto": "..." } ]
+}
+```
+
+Límites: `mensaje` hasta 500 caracteres, `historial` hasta 20 turnos (se reenvían los últimos 6), itinerario de hasta 7 días y 15 actividades por día. Fuera de eso: 422.
+
+Respuesta (`RespuestaAgente`):
+
+| Campo | Qué hacer |
+|---|---|
+| `estado` | `respondido`, `requiere_confirmacion` (§7.2) o `tope_alcanzado` (el agente se rindió: mostrar `respuesta`, que dice que lo revisará un asesor) |
+| `respuesta` | Texto plano para la burbuja del asistente (`null` si `requiere_confirmacion`) |
+| `itinerario` | El itinerario **actual**: reemplace el que muestra y vuelva a dibujar el mapa. Es el que debe enviar en el próximo mensaje |
+| `cambios` | Lo que hizo `recalcular`, p. ej. «Día 1: sale Cascada Pailón del Diablo por lluvia; entra Basílica…». Resalte esas actividades |
+| `fuentes` | Fragmentos que consultó el agente (`fuente`, `url`, `texto`). Muéstrelos bajo la respuesta como «Fuentes consultadas» |
+| `advertencias` | Datos de la respuesta (horas, montos) que el código **no encontró** en ninguna fuente. Muéstrelos visibles junto a la respuesta |
+| `vueltas` | Diagnóstico; no hace falta mostrarlo |
+
+Errores: 503 si el modelo no está disponible (mismo mensaje que §3.3), 422 si la petición no es válida.
+
+### 7.2 Confirmación humana (`requiere_confirmacion`)
+
+Cuando el agente quiere **enviar el itinerario** (la única acción que sale del sistema), no lo hace: devuelve `confirmacion`:
+
+```json
+{ "id": "3f2a…", "accion": "enviar_itinerario", "argumentos": { "correo": "ana@correo.com" },
+  "descripcion": "Enviar el itinerario de 2 día(s) (3 actividades, costo estimado USD 22.50) a ana@correo.com.",
+  "expira_en_s": 900 }
+```
+
+- Muestre una tarjeta con `descripcion` y los botones **Aprobar** y **Rechazar**. La descripción la arma el código con los argumentos reales: es lo que se ejecutará.
+- Al pulsar, `POST /agente/confirmar/{id}` con `{"aprobar": true}` o `{"aprobar": false}`. La respuesta es otra `RespuestaAgente` (el agente continúa y confirma lo que pasó).
+- Desactive los botones tras el primer clic: cada `id` se decide **una sola vez**. Un segundo intento, o uno después de `expira_en_s`, responde 404 («ya se decidió o venció»).
+- El envío es **simulado** (queda en la bandeja de salida del servidor, con el correo enmascarado); dígalo en la interfaz.
 
 ## 8. Accesibilidad, móvil e idioma
 

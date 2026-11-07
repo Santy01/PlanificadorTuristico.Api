@@ -28,9 +28,16 @@ class ParamsRecalcular(_Seccion):
     holgura_h: float = Field(ge=0, le=8)
 
 
+class ParamsAgente(_Seccion):
+    max_iter: int = Field(ge=1, le=12)
+    confirmacion_ttl_min: float = Field(gt=0, le=24 * 60)
+    max_historial: int = Field(ge=0, le=20)
+
+
 class Parametros(_Seccion):
     itinerario: ParamsItinerario
     recalcular: ParamsRecalcular
+    agente: ParamsAgente
 
 
 class ErrorParametros(RuntimeError):

@@ -7,11 +7,13 @@ import logging
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Path
 from fastapi.responses import StreamingResponse
 
+from src.agente import AlmacenPendientes, confirmar, conversar
 from src.catalogo import RUTA_CATALOGO, RUTA_REDUCIDA, Atractivo, cargar_catalogo, con_ubicacion
-from src.schemas import RespuestaItinerario, SolicitudItinerario
+from src.parametros import parametros
+from src.schemas import DecisionAgente, RespuestaAgente, RespuestaItinerario, SolicitudAgente, SolicitudItinerario
 from src.services.clima import ClienteClima
 from src.services.itinerario import generar_itinerario, stream_itinerario
 from src.services.llm import ClienteLLM, ProveedorNoDisponible
@@ -31,7 +33,7 @@ async def ciclo_de_vida(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Planificador Turístico Zona Centro", version="0.3.0", lifespan=ciclo_de_vida)
+app = FastAPI(title="Planificador Turístico Zona Centro", version="0.4.0", lifespan=ciclo_de_vida)
 
 
 @lru_cache
@@ -80,6 +82,35 @@ def itinerario(solicitud: SolicitudItinerario, llm: ClienteLLM = Depends(obtener
 def _sse(evento: str, dato) -> str:
     cuerpo = dato.model_dump(mode="json") if hasattr(dato, "model_dump") else dato
     return f"event: {evento}\ndata: {json.dumps(cuerpo, ensure_ascii=False)}\n\n"
+
+
+@lru_cache
+def obtener_pendientes() -> AlmacenPendientes:
+    return AlmacenPendientes(ttl_s=parametros().agente.confirmacion_ttl_min * 60)
+
+
+@app.post("/agente", response_model=RespuestaAgente)
+def agente(sol: SolicitudAgente, llm: ClienteLLM = Depends(obtener_llm),
+           catalogo: dict[str, Atractivo] = Depends(obtener_catalogo),
+           clima: ClienteClima = Depends(obtener_clima), rag: ClienteRAG | None = Depends(obtener_rag),
+           pendientes: AlmacenPendientes = Depends(obtener_pendientes)):
+    """Conversa sobre un itinerario ya generado: lo ajusta (recalcular), consulta clima y fuentes. Si el agente
+    quiere enviar el itinerario, responde `requiere_confirmacion` y NO lo envía hasta /agente/confirmar/{id}."""
+    try:
+        return conversar(llm, sol, catalogo, rag, clima, pendientes)
+    except ProveedorNoDisponible as e:
+        raise HTTPException(status_code=503, detail=e.mensaje_usuario)
+
+
+@app.post("/agente/confirmar/{id_accion}", response_model=RespuestaAgente)
+def agente_confirmar(decision: DecisionAgente, id_accion: str = Path(max_length=64),
+                     llm: ClienteLLM = Depends(obtener_llm),
+                     pendientes: AlmacenPendientes = Depends(obtener_pendientes)):
+    """El visitante aprueba o rechaza la acción pendiente. Recién aquí se ejecuta; cada id se decide una sola vez."""
+    r = confirmar(llm, id_accion, decision.aprobar, pendientes)
+    if r is None:
+        raise HTTPException(status_code=404, detail="No hay una acción pendiente con ese id (ya se decidió o venció).")
+    return r
 
 
 @app.post("/itinerario/stream")
