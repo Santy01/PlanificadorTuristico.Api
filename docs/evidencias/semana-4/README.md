@@ -86,3 +86,28 @@ Gemini tarda unos 11–13 s por itinerario (Groq, ~1 s): sirve como respaldo den
 streaming la respuesta final todavía no indica qué proveedor respondió.
 
 **Pruebas:** 214 pasan, con 95 % de cobertura.
+
+## 4. Pruebas funcionales (misión 6)
+
+`tests/smoke.py` llama a la API como el frontend, con el modelo real y sin claves en el cliente. Tiene 8 casos de los
+5 tipos del taller, más la confirmación humana: la acción pendiente se rechaza al final, así que nunca se envía nada.
+Corre a mano y, desde la 0.4.0, en el pipeline después de cada despliegue.
+
+Primera corrida, contra la API local (Groq como principal, Gemini como respaldo):
+
+```
+PASA  1. [salud] GET /health -> 200 en 0.0 s
+PASA  2. [caso] POST /itinerario -> 200 en 1.7 s
+PASA  3. [caso] POST /itinerario -> 200 en 0.9 s
+PASA  4. [fuera] POST /itinerario -> 200 en 0.0 s
+PASA  5. [inyeccion] POST /itinerario -> 200 en 0.0 s
+PASA  6. [invalida] POST /itinerario -> 422 en 0.0 s
+PASA  7. [caso] POST /agente -> 200 en 5.5 s
+PASA  8. [confirmacion] POST /agente -> 200 en 8.0 s
+      (limpieza: acción pendiente rechazada -> 200; no se envió nada)
+
+RESULTADO: 8/8 pasan · p95 8.0 s · más lento 8.0 s
+```
+
+Los casos 4 y 5 tardan 0.0 s porque los rechaza la regla de alcance sin llamar al modelo. **Pendiente:** correrlo
+contra producción después de liberar la 0.4.0.
