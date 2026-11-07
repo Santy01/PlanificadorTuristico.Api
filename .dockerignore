@@ -1,0 +1,27 @@
+# Secretos: nunca entran en la imagen (se inyectan al ejecutar con env_file)
+.env
+.env.*
+!.env.example
+secrets/
+
+# Git, entornos y cachés
+.git
+.github
+.gitignore
+.venv
+venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.vscode/
+.idea/
+
+# Datos generados y registros: llegan por volumen, no en la imagen
+data/vectorstore/
+logs/
+eval/resultados_prompts.json
+
+# No hacen falta para servir la API
+docs/
+tests/
+eval/

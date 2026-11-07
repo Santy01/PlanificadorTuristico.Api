@@ -1,0 +1,97 @@
+name: ci-cd
+
+# CI (revisión de secretos con Gitleaks + pruebas + construcción de la imagen): en cada push y pull request a develop o master.
+# CD (despliegue al VPS): solo al hacer push a master, o a mano desde la pestaña Actions.
+on:
+  push:
+    branches: [develop, master]
+  pull_request:
+    branches: [develop, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  secretos:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # historial completo: Gitleaks revisa también los commits anteriores
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      # Las pruebas no cargan el modelo de embeddings (el conftest apaga el RAG real):
+      # se omite sentence-transformers y no se descarga torch.
+      - name: Instalar dependencias
+        run: |
+          grep -v "sentence-transformers" requirements.txt > requirements-ci.txt
+          pip install -r requirements-ci.txt
+      - name: Ejecutar pruebas
+        run: python -m pytest -q
+
+  imagen:
+    needs: pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Construir la imagen (sin publicarla)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  despliegue:
+    needs: [secretos, pruebas, imagen]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: despliegue-vps
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparar SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      # Se sube solo el código y los datos versionados. El .env y el índice (data/vectorstore)
+      # viven en el servidor y no se tocan.
+      - name: Subir el código al VPS
+        run: |
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "cd /opt/planificador && rm -rf src scripts data/catalogo data/corpus"
+          tar czf - src scripts data/catalogo data/corpus requirements.txt Dockerfile .dockerignore docker-compose.yml \
+            | ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "tar xzf - -C /opt/planificador"
+
+      - name: Construir y reiniciar el contenedor
+        run: |
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "cd /opt/planificador && docker build -t planificador-api:latest . && docker compose up -d && docker image prune -f"
+
+      - name: Verificar que la API responde
+        run: |
+          for _ in $(seq 1 12); do
+            if curl -fsS "${{ secrets.APP_HEALTH_URL }}"; then echo; exit 0; fi
+            sleep 10
+          done
+          echo "La API no respondió después del despliegue"
+          exit 1
