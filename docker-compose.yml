@@ -17,7 +17,11 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik_proxy
-      - traefik.http.routers.planificador.rule=Host(`planificador.bhsolutions.cloud`)
+      # Mismo dominio que el frontend (opción A): la API toma solo sus rutas, con prioridad 100; todo lo demás va al
+      # contenedor del frontend (prioridad 1, en el repositorio PlanificadorTuristico.Web). Si se agrega un endpoint,
+      # hay que sumarlo aquí: tests/test_despliegue.py lo comprueba.
+      - traefik.http.routers.planificador.rule=Host(`planificador.bhsolutions.cloud`) && (PathPrefix(`/itinerario`) || PathPrefix(`/agente`) || Path(`/health`) || PathPrefix(`/docs`) || Path(`/openapi.json`) || PathPrefix(`/redoc`))
+      - traefik.http.routers.planificador.priority=100
       - traefik.http.routers.planificador.entrypoints=websecure
       - traefik.http.routers.planificador.tls.certresolver=letsencryptresolver
       - traefik.http.services.planificador.loadbalancer.server.port=8000
