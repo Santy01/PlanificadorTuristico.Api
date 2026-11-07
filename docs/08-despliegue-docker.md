@@ -45,6 +45,23 @@ docker history --no-trunc planificador-api:latest | grep -i -E "key|token|secret
 
 Si una clave real llegó alguna vez a git, a un chat o a un archivo compartido, debe **rotarse** (Groq, Google Maps).
 
+## 3.1 Frontend y API en el mismo dominio
+
+Desde la versión 0.4.2, `https://planificador.bhsolutions.cloud` sirve **también el frontend** (repositorio
+`PlanificadorTuristico.Web`, contenedor `planificador-web`). Traefik reparte por ruta:
+
+| Ruta | Contenedor | Regla |
+|---|---|---|
+| `/itinerario`, `/agente`, `/health`, `/docs`, `/redoc`, `/openapi.json` | `planificador-api` | `Host(...) && (PathPrefix(...) \|\| ...)`, prioridad **100** (`docker-compose.yml` de este repositorio) |
+| Todo lo demás (`/`, archivos de la aplicación) | `planificador-web` | `Host(...)`, prioridad **1** (`docker-compose.yml` del frontend) |
+
+No hace falta CORS (mismo origen) ni tocar el DNS, y la API sigue recibiendo la IP real del visitante para su límite por
+IP: entre el visitante y la API solo está Traefik. **Si se agrega un endpoint a la API, hay que sumarlo a la regla:**
+`tests/test_despliegue.py` falla si alguna ruta de la API quedó fuera.
+
+Orden al desplegar por primera vez: primero la API con la regla nueva (deja libre `/` para el frontend) y después el
+frontend.
+
 ## 4. Datos del Traefik del servidor
 
 Se obtuvieron con `docker inspect traefik` y `cat /opt/traefik/traefik.yml`:
