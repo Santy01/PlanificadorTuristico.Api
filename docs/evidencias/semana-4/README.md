@@ -111,3 +111,44 @@ RESULTADO: 8/8 pasan · p95 8.0 s · más lento 8.0 s
 
 Los casos 4 y 5 tardan 0.0 s porque los rechaza la regla de alcance sin llamar al modelo. **Pendiente:** correrlo
 contra producción después de liberar la 0.4.0.
+
+## 5. Liberación 0.4.0 en producción
+
+El 7 de noviembre se fusionó el PR #23 en `master` y el pipeline desplegó en el VPS: Gitleaks, pruebas, imagen, SSH con
+la llave nueva, reconstrucción del contenedor (3 min 26 s) y `/health`, todo en verde. Producción responde:
+
+```json
+{"status":"ok","version":"0.4.0","rag":{"activo":true,"fragmentos":241},
+ "modelo":{"principal":{"nombre":"groq","modelo":"openai/gpt-oss-20b","configurado":true},
+           "respaldo":{"nombre":"gemini","modelo":"gemini-3.5-flash","configurado":true}}}
+```
+
+**Pruebas funcionales en el pipeline: 7/8.** El caso 7 (pregunta al agente) respondió 503 en 1.2 s. Se repitió a mano
+contra producción y dio 8/8 (el caso 7 tardó 22.8 s), así que el fallo era intermitente. El registro del servidor
+(`logs/llm.jsonl`) mostró la causa:
+
+```
+ok               groq    tokens_entrada 1385  fin tool_calls   ← vuelta 1 del agente
+reintento        groq    429  espera_s 23.43                   ← vuelta 2: sin cuota; pide más de 20 s → pasa al respaldo
+error_definitivo gemini  400                                   ← Gemini rechaza el historial
+sin_proveedor                                                  ← 503
+```
+
+Hubo dos causas:
+
+1. **Cuota (riesgo R1, ocurrió).** Los dos itinerarios previos de la prueba gastaron ~6 000 de los 8 000 tokens por
+   minuto de Groq. **Corrección:** `smoke.py` hace una pausa de 20 s antes de los casos del agente.
+2. **Bug del respaldo a mitad de conversación.** Gemini 3 exige una `thought_signature` en cada `tool_call` del
+   historial, también en los que generó otro modelo; los de Groq no la tienen. Las pruebas anteriores no lo vieron:
+   el agente con Gemini empezaba desde la primera vuelta y el respaldo real se había probado con el itinerario, que no
+   usa herramientas. **Corrección:** a los `tool_calls` sin firma se les agrega la firma ficticia que Google documenta
+   para historiales de otro origen (`skip_thought_signature_validator`); las firmas reales se conservan.
+
+**Verificación con los proveedores reales:** vuelta 1 con Groq real (pide `consultar_clima`); en la vuelta 2 Groq
+responde 429 (simulado, pidiendo 30 s como en producción) y **Gemini real completa la conversación** sobre el historial
+de Groq: «Sí, para el día 1 se pronostican chubascos con lluvia intensa (88 %)…». Antes de responder, Gemini devolvió
+503 por alta demanda y 429 por cuota, y los reintentos lo absorbieron (16 s).
+
+**Lección:** el respaldo protege contra la caída de Groq, pero el plan gratuito de Gemini también se satura (503 por
+alta demanda, latencias de hasta 66 s en las pruebas). Con los dos planes gratuitos agotados, la API responde 503 con
+un mensaje claro, que es el comportamiento esperado.
