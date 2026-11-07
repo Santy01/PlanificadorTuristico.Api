@@ -191,3 +191,157 @@ def test_stream_con_error_inesperado_emite_evento_error_y_no_excepcion():
 def test_sin_respaldo_espera_mas_antes_de_rendirse():
     c, esperas = cliente(Doble([error_http(openai.RateLimitError, 429, {"retry-after": "30"}), BUENA]))
     assert c.generar_json("sys", "peticion", ItinerarioModelo).intentos == 2 and 30 <= esperas[0] <= 30.5
+
+
+# ---------------------------------------------------------------- agente: herramientas
+def respuesta_con_tools(*llamadas):
+    tcs = [NS(id=f"c{i}", function=NS(name=n, arguments=a)) for i, (n, a) in enumerate(llamadas)]
+    return NS(choices=[NS(message=NS(content=None, tool_calls=tcs), finish_reason="tool_calls")],
+              usage=NS(prompt_tokens=10, completion_tokens=5))
+
+
+class DobleTools(Doble):
+    def _create(self, **kw):
+        self.llamadas.append(kw)
+        paso = self.guion.pop(0)
+        if isinstance(paso, Exception):
+            raise paso
+        return paso
+
+
+def test_pedir_herramientas_sin_texto_no_es_respuesta_vacia():
+    d = DobleTools([respuesta_con_tools(("recalcular", '{"dia": 1}'))])
+    r = cliente(d)[0].generar_con_herramientas([{"role": "user", "content": "x"}], [{"type": "function"}])
+    assert r.intentos == 1 and r.datos.contenido is None
+    assert [(x.id, x.nombre, x.argumentos) for x in r.datos.llamadas] == [("c0", "recalcular", '{"dia": 1}')]
+    assert d.llamadas[0]["tools"] == [{"type": "function"}] and d.llamadas[0]["tool_choice"] == "auto"
+
+
+def test_herramientas_reintenta_y_pasa_al_respaldo():
+    a = DobleTools([error_http(openai.RateLimitError, 429)] * 3)
+    b = DobleTools([respuesta(None), respuesta_con_tools(("consultar_clima", "{}"))])  # vacía: se reintenta
+    r = cliente(a, b)[0].generar_con_herramientas([], [])
+    assert r.proveedor == "b" and r.datos.llamadas[0].nombre == "consultar_clima"
+
+
+def test_mensaje_assistant_con_tool_calls():
+    from src.services.llm import LlamadaHerramienta, MensajeModelo
+    m = MensajeModelo(None, [LlamadaHerramienta("c1", "recalcular", "{}")]).como_mensaje()
+    assert m == {"role": "assistant", "content": "", "tool_calls": [
+        {"id": "c1", "type": "function", "function": {"name": "recalcular", "arguments": "{}"}}]}
+
+
+# ---------------------------------------------------------------- Gemini como respaldo (Semana 4)
+from src.config import CATALOGO, ErrorConfiguracion, cargar_config, estado_proveedores  # noqa: E402
+from src.services.llm import adaptar_esquema, formato_json, tools_para  # noqa: E402
+
+
+def groq_y_gemini(a, b, razonamiento="low"):
+    cfg = Config(principal=Proveedor("groq", "u", "k", "gpt-oss-20b", True, "estricto"),
+                 respaldo=Proveedor("gemini", "u", "k", "gemini-flash", False, "gemini"),
+                 timeout_s=5, max_tokens=100, reintentos=2, razonamiento=razonamiento)
+    return ClienteLLM(cfg, clientes={"groq": a, "gemini": b}, dormir=lambda s: None)
+
+
+def test_si_groq_agota_la_cuota_responde_gemini_con_su_dialecto():
+    a = Doble([error_http(openai.RateLimitError, 429)] * 2)
+    b = Doble([BUENA])
+    r = groq_y_gemini(a, b).generar_json("sys", "peticion", ItinerarioModelo)
+    assert r.proveedor == "gemini" and r.datos.dias[0].numero == 1
+    esquema_groq = a.llamadas[0]["response_format"]["json_schema"]["schema"]
+    esquema_gemini = b.llamadas[0]["response_format"]["json_schema"]["schema"]
+    assert "$defs" in esquema_groq and "$defs" not in json.dumps(esquema_gemini)
+
+
+def test_reasoning_effort_solo_a_quien_lo_admite():
+    a = Doble([error_http(openai.AuthenticationError, 401)])   # clave mala: pasa directo al respaldo
+    b = Doble([BUENA])
+    groq_y_gemini(a, b).generar_json("sys", "p", ItinerarioModelo)
+    assert a.llamadas[0]["reasoning_effort"] == "low" and "reasoning_effort" not in b.llamadas[0]
+    assert len(a.llamadas) == 1                                  # error definitivo: sin reintentos
+
+
+def test_agente_con_gemini_recibe_las_mismas_herramientas_adaptadas():
+    from src.agente import ESQUEMAS
+    a = DobleTools([error_http(openai.InternalServerError, 503)] * 2)
+    b = DobleTools([respuesta_con_tools(("recalcular", '{"dia": 1}'))])
+    r = groq_y_gemini(a, b).generar_con_herramientas([{"role": "user", "content": "x"}], ESQUEMAS)
+    assert r.proveedor == "gemini" and r.datos.llamadas[0].nombre == "recalcular"
+    enviados = b.llamadas[0]["tools"]
+    assert [h["function"]["name"] for h in enviados] == [h["function"]["name"] for h in ESQUEMAS]
+    assert "additionalProperties" not in json.dumps(enviados) and a.llamadas[0]["tools"] is ESQUEMAS
+
+
+def test_los_dos_caidos_da_proveedor_no_disponible():
+    a = Doble([error_http(openai.RateLimitError, 429)] * 2)
+    b = Doble([error_http(openai.RateLimitError, 429)] * 2)
+    with pytest.raises(ProveedorNoDisponible):
+        groq_y_gemini(a, b).generar_json("sys", "p", ItinerarioModelo)
+
+
+def test_adaptar_esquema_gemini_resuelve_referencias_y_nulos():
+    e = adaptar_esquema(ItinerarioModelo.model_json_schema(), "gemini")
+    texto = json.dumps(e)
+    for clave in ("$ref", "$defs", "title", "additionalProperties", "anyOf"):
+        assert clave not in texto
+    assert e["properties"]["motivo_rechazo"] == {
+        "type": "string", "nullable": True, "description": ItinerarioModelo.model_fields["motivo_rechazo"].description}
+    atractivo = e["properties"]["dias"]["items"]["properties"]["atractivos"]["items"]
+    assert set(atractivo["required"]) == {"id", "motivo"}
+    assert adaptar_esquema({"a": 1}, "estricto") == {"a": 1}
+    with pytest.raises(ValueError):
+        adaptar_esquema({}, "otro")
+
+
+def test_formato_y_tools_sin_cambios_para_groq():
+    assert formato_json(ItinerarioModelo, "estricto")["response_format"]["json_schema"]["schema"] == \
+        ItinerarioModelo.model_json_schema()
+    h = [{"type": "function", "function": {"name": "x", "parameters": {"title": "T", "type": "object"}}}]
+    assert tools_para(h, "estricto") is h and tools_para(h, "gemini")[0]["function"]["parameters"] == {"type": "object"}
+
+
+def test_config_gemini_como_respaldo(monkeypatch):
+    monkeypatch.setenv("LLM_PRINCIPAL", "groq")
+    monkeypatch.setenv("GROQ_API_KEY", "gsk-prueba")
+    monkeypatch.setenv("LLM_RESPALDO", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "")
+    with pytest.raises(ErrorConfiguracion, match="GEMINI_API_KEY"):
+        cargar_config()                                          # sin clave: se detiene al arrancar
+    monkeypatch.setenv("GEMINI_API_KEY", "clave-de-prueba")
+    monkeypatch.setenv("GEMINI_MODEL", "")
+    c = cargar_config()
+    assert c.respaldo.nombre == "gemini" and c.respaldo.modelo == CATALOGO["gemini"]["modelo"]
+    assert c.respaldo.base_url.startswith("https://generativelanguage.googleapis.com")
+    assert not c.respaldo.admite_razonamiento and c.respaldo.esquema == "gemini"
+
+
+def test_estado_proveedores_nunca_muestra_la_clave(monkeypatch):
+    monkeypatch.setenv("LLM_PRINCIPAL", "groq")
+    monkeypatch.setenv("GROQ_API_KEY", "valor-ficticio")
+    monkeypatch.setenv("LLM_RESPALDO", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "")
+    e = estado_proveedores()
+    assert e["principal"]["configurado"] and not e["respaldo"]["configurado"]
+    assert "valor-ficticio" not in json.dumps(e)
+    monkeypatch.setenv("LLM_RESPALDO", "")
+    assert estado_proveedores()["respaldo"] is None
+
+
+def test_thought_signature_de_gemini_vuelve_en_la_siguiente_vuelta():
+    """Gemini 3 responde 400 si el tool_call vuelve sin su extra_content.google.thought_signature."""
+    from openai.types.chat import ChatCompletionMessageToolCall
+    tc = ChatCompletionMessageToolCall.model_validate({
+        "id": "c1", "type": "function", "function": {"name": "consultar_clima", "arguments": '{"dia": 1}'},
+        "extra_content": {"google": {"thought_signature": "firma"}}})
+    d = DobleTools([NS(choices=[NS(message=NS(content=None, tool_calls=[tc]), finish_reason="tool_calls")],
+                       usage=NS(prompt_tokens=1, completion_tokens=1))])
+    r = cliente(d)[0].generar_con_herramientas([], [])
+    m = r.datos.como_mensaje()
+    assert m["tool_calls"][0]["extra_content"] == {"google": {"thought_signature": "firma"}}
+    assert m["tool_calls"][0]["function"]["name"] == "consultar_clima"
+
+
+def test_sin_campos_extra_el_mensaje_no_cambia():
+    from src.services.llm import LlamadaHerramienta, MensajeModelo
+    m = MensajeModelo(None, [LlamadaHerramienta("c1", "x", "{}")]).como_mensaje()
+    assert set(m["tool_calls"][0]) == {"id", "type", "function"}

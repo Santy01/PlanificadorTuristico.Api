@@ -1,0 +1,23 @@
+# Parámetros de negocio del planificador.
+# Viven fuera del código y del prompt: cambiarlos no exige tocar Python ni volver a probar el modelo.
+# Los valida src/parametros.py al arrancar; un valor fuera de rango detiene la API con un mensaje claro.
+
+itinerario:
+  jornada_max_h: 8.0            # horas máximas de actividades por día (HU-02)
+  duracion_por_defecto_h: 2.0   # se asume cuando la duración del catálogo está POR VERIFICAR
+
+recalcular:
+  holgura_h: 0.5                # el reemplazo puede durar como mucho lo que el atractivo que sale + esta holgura
+
+agente:
+  max_iter: 6                   # vueltas máximas del bucle por solicitud; al llegar, responde «lo revisa un asesor»
+  confirmacion_ttl_min: 15      # minutos que una acción pendiente espera la decisión del visitante
+  max_historial: 6              # turnos previos de la conversación que se reenvían al modelo (tokens)
+
+limites:
+  # Peticiones por IP en la ventana (OWASP LLM10, consumo sin límite): protegen la cuota del plan gratuito.
+  # Al pasarse, la API responde 429 con Retry-After. En memoria: vale para un proceso de uvicorn.
+  ventana_s: 60
+  itinerario: 10                # /itinerario y /itinerario/stream comparten el contador
+  agente: 20                    # /agente y /agente/confirmar comparten el contador
+  proxies_confiables: 1         # Traefik delante: la IP real es la última que agrega en X-Forwarded-For

@@ -1,0 +1,149 @@
+[
+  {
+    "id": "S01",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 7,
+    "citas": 2,
+    "costo_total_usd": 9.0,
+    "ms": 12770,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S02",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 6,
+    "citas": 3,
+    "costo_total_usd": 20.0,
+    "ms": 1105,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S03",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 4,
+    "citas": 0,
+    "costo_total_usd": 18.0,
+    "ms": 1030,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S04",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 4,
+    "citas": 1,
+    "costo_total_usd": 8.0,
+    "ms": 1038,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S05",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 2,
+    "citas": 0,
+    "costo_total_usd": 6.0,
+    "ms": 1002,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S06",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 9,
+    "citas": 2,
+    "costo_total_usd": 3.5,
+    "ms": 1590,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S07",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 9,
+    "citas": 3,
+    "costo_total_usd": 3.5,
+    "ms": 1536,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S08",
+    "fallas": [],
+    "estado": "rechazado",
+    "actividades": 0,
+    "citas": 0,
+    "costo_total_usd": null,
+    "ms": 0,
+    "mensaje": "Solo planifico itinerarios en la zona centro del Ecuador (Tungurahua, Chimborazo, Cotopaxi y Bolívar). Lo que pide está fuera de esa zona."
+  },
+  {
+    "id": "S09",
+    "fallas": [],
+    "estado": "rechazado",
+    "actividades": 0,
+    "citas": 0,
+    "costo_total_usd": null,
+    "ms": 0,
+    "mensaje": "No puedo hacer reservas, compras ni pagos: solo planifico visitas a atractivos del catálogo verificado. Consulte directamente con el establecimiento."
+  },
+  {
+    "id": "S10",
+    "fallas": [],
+    "estado": "rechazado",
+    "actividades": 0,
+    "citas": 0,
+    "costo_total_usd": null,
+    "ms": 0,
+    "mensaje": "La solicitud contiene instrucciones para cambiar el comportamiento del planificador; no se procesa. Describa solo su viaje: días, presupuesto, intereses y lugar"
+  },
+  {
+    "id": "S11",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 4,
+    "citas": 2,
+    "costo_total_usd": 2.0,
+    "ms": 1226,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S12",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 1,
+    "citas": 0,
+    "costo_total_usd": 0,
+    "ms": 639,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S13",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 4,
+    "citas": 1,
+    "costo_total_usd": 0,
+    "ms": 1180,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S14",
+    "error": "ProveedorNoDisponible",
+    "fallas": [
+      "ProveedorNoDisponible"
+    ]
+  },
+  {
+    "id": "S15",
+    "fallas": [],
+    "estado": "rechazado",
+    "actividades": 0,
+    "citas": 0,
+    "costo_total_usd": null,
+    "ms": 0,
+    "mensaje": "Solo planifico itinerarios en la zona centro del Ecuador (Tungurahua, Chimborazo, Cotopaxi y Bolívar). Lo que pide está fuera de esa zona."
+  }
+]

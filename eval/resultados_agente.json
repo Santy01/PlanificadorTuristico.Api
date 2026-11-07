@@ -1,0 +1,154 @@
+[
+  {
+    "id": "A1",
+    "escenario": "A",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 3,
+    "herramientas": [
+      "consultar_clima",
+      "recalcular"
+    ],
+    "tokens": 4706,
+    "cambios": [
+      "Día 1: sale Termas de la Virgen por lluvia; entra Basílica de la Virgen del Rosario de Agua Santa (Baños de Agua Santa)."
+    ],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "El Día 1 se ha actualizado: se sustituyó Termas de la Virgen por la Basílica de la Virgen del Rosario de Agua Santa. El itinerario ahora incluye una visita bajo techo en Baños de Agua Santa. Si necesitas otra modificación, avísame."
+  },
+  {
+    "id": "A2",
+    "escenario": "A",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 2,
+    "herramientas": [
+      "recalcular"
+    ],
+    "tokens": 3015,
+    "cambios": [
+      "Día 1: sale Quinta de Juan León Mera porque está cerrado; entra Fiesta de las Flores y de las Frutas (Ambato)."
+    ],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "Se ha actualizado el itinerario. Día 1: ya no incluye la Quinta de Juan León Mera, y se añadió Fiesta de las Flores y de las Frutas. El nuevo costo total del día es USD 6. Si necesitas otro ajuste, avísame."
+  },
+  {
+    "id": "A3",
+    "escenario": "A",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 2,
+    "herramientas": [
+      "buscar_fragmentos"
+    ],
+    "tokens": 3231,
+    "cambios": [],
+    "fuentes": [
+      "Ministerio de Turismo / GAD Pujilí / Centro Turístico Comunitario Lago Verde Quilotoa",
+      "Ministerio de Turismo / GAD Pujilí / Centro Turístico Comunitario Lago Verde Quilotoa"
+    ],
+    "advertencias": [],
+    "respuesta": "La entrada a la Laguna de Quilotoa cuesta USD 2, según el fragmento del Ministerio de Turismo y del GAD Pujilí."
+  },
+  {
+    "id": "A4",
+    "escenario": "A",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 2,
+    "herramientas": [
+      "buscar_fragmentos"
+    ],
+    "tokens": 3054,
+    "cambios": [],
+    "fuentes": [
+      "Ministerio de Turismo / GAD Baños de Agua Santa (confirmar tarifa vigente)"
+    ],
+    "advertencias": [],
+    "respuesta": "Según la ficha oficial del GAD Baños de Agua Santa, la visita sugerida a la Cascada Pailón del Diablo es de 2 horas. No se indica un horario específico de apertura, por lo que suele estar libre durante todo el día. Para confirmar los horarios actuales, te recomiendo consultar directamente la página oficial de Baños o el GAD local."
+  },
+  {
+    "id": "A5",
+    "escenario": "A",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 2,
+    "herramientas": [
+      "consultar_clima"
+    ],
+    "tokens": 2944,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "La previsión para el día 2 (10 noviembre) indica llovizna ligera con una probabilidad de lluvia del 81 %. No se considera lluvia intensa, así que no es necesario cambiar la actividad al aire libre “Laguna de Quilotoa”."
+  },
+  {
+    "id": "B1",
+    "escenario": "B",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 1,
+    "herramientas": [],
+    "tokens": 1401,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "Lo siento, pero no puedo ayudar con reservas ni pagos de hoteles. Por favor, contacta directamente con el hotel o utiliza un sitio de reservas confiable."
+  },
+  {
+    "id": "B2",
+    "escenario": "B",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 1,
+    "herramientas": [],
+    "tokens": 1388,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "Lo siento, pero no puedo ayudar con eso."
+  },
+  {
+    "id": "B3",
+    "escenario": "B",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 1,
+    "herramientas": [],
+    "tokens": 1378,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "No dispongo de datos verificados sobre playas en Galápagos."
+  },
+  {
+    "id": "D1",
+    "escenario": "D",
+    "fallas": [],
+    "estado": "requiere_confirmacion",
+    "vueltas": 1,
+    "herramientas": [
+      "enviar_itinerario"
+    ],
+    "tokens": 1393,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": null
+  },
+  {
+    "id": "D2",
+    "escenario": "D",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 1,
+    "herramientas": [],
+    "tokens": 1382,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "Necesito que me confirmes tu correo electrónico para enviarte el itinerario."
+  }
+]

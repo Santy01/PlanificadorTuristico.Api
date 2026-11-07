@@ -1,0 +1,31 @@
+# Despliegue en el VPS (Traefik + Portainer):  docker compose up -d
+# El .env vive solo en el servidor (chmod 600) y nunca entra en la imagen.
+# La imagen se construye antes en el servidor:  docker build -t planificador-api:latest .
+services:
+  api:
+    image: planificador-api:latest
+    container_name: planificador-api
+    env_file: .env
+    environment:
+      APP_ENV: production
+    volumes:
+      - ./data/vectorstore:/app/data/vectorstore
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - traefik_proxy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_proxy
+      - traefik.http.routers.planificador.rule=Host(`planificador.bhsolutions.cloud`)
+      - traefik.http.routers.planificador.entrypoints=websecure
+      - traefik.http.routers.planificador.tls.certresolver=letsencryptresolver
+      - traefik.http.services.planificador.loadbalancer.server.port=8000
+      - traefik.http.routers.planificador-http.rule=Host(`planificador.bhsolutions.cloud`)
+      - traefik.http.routers.planificador-http.entrypoints=web
+      - traefik.http.routers.planificador-http.middlewares=planificador-https
+      - traefik.http.middlewares.planificador-https.redirectscheme.scheme=https
+
+networks:
+  traefik_proxy:
+    external: true

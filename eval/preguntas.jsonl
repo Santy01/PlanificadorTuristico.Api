@@ -1,0 +1,15 @@
+{"id": "P01", "pregunta": "¿Qué horario tiene el Pailón del Diablo?", "fuente_esperada": ["cascada-pailon-del-diablo"], "nota": "también en la calibración del piso"}
+{"id": "P02", "pregunta": "¿Cuánto cuesta el tren a la Nariz del Diablo?", "fuente_esperada": ["tren-ecuador-nariz-del-diablo"], "nota": "también en la calibración del piso"}
+{"id": "P03", "pregunta": "¿Dónde puedo comer hornado en Riobamba?", "fuente_esperada": ["hornado-de-riobamba"], "nota": "también en la calibración del piso"}
+{"id": "P04", "pregunta": "¿Se puede nadar en la laguna de Quilotoa?", "fuente_esperada": ["laguna-de-quilotoa"], "nota": "también en la calibración del piso"}
+{"id": "P05", "pregunta": "¿Qué se celebra en el carnaval de Guaranda?", "fuente_esperada": ["carnaval-de-guaranda", "museo-del-carnaval-guaranda"]}
+{"id": "P06", "pregunta": "¿Qué artesanías hacen en Salasaca?", "fuente_esperada": ["salasaca-artesania-textil"]}
+{"id": "P07", "pregunta": "¿Hay aguas termales en Baños de Agua Santa?", "fuente_esperada": ["termas-de-la-virgen", "termas-de-el-salado"]}
+{"id": "P08", "pregunta": "¿Qué lleva la chugchucara de Latacunga?", "fuente_esperada": ["chugchucaras-de-latacunga"]}
+{"id": "P09", "pregunta": "¿Qué se puede hacer en el Parque Nacional Cotopaxi?", "fuente_esperada": ["parque-nacional-cotopaxi", "volcan-cotopaxi-y-refugio-jose-rivas"]}
+{"id": "P10", "pregunta": "¿Qué tipo de alfombras se tejen en Guano?", "fuente_esperada": ["alfombras-de-guano"]}
+{"id": "P11", "pregunta": "¿Qué quesos y chocolates producen en Salinas de Guaranda?", "fuente_esperada": ["quesos-y-chocolates-de-salinas"]}
+{"id": "P12", "pregunta": "¿Qué playas recomiendan en Montañita?", "fuente_esperada": null, "nota": "fuera de la zona: debe quedar bajo el piso"}
+{"id": "P13", "pregunta": "¿Cuánto cuesta la entrada a la Sagrada Familia de Barcelona?", "fuente_esperada": null, "nota": "fuera de la zona"}
+{"id": "P14", "pregunta": "¿Qué dosis de ibuprofeno debo tomar para el dolor de cabeza?", "fuente_esperada": null, "nota": "consejo médico: fuera del alcance"}
+{"id": "P15", "pregunta": "¿Qué restaurantes hay en el malecón de Guayaquil?", "fuente_esperada": null, "nota": "fuera de la zona"}

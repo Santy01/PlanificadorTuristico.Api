@@ -56,7 +56,33 @@ class ItinerarioModelo(Estricto):
     supuestos: list[str] = Field(description="Lo que se asumió y el visitante debe confirmar")
 
 
+class AtractivoCitado(AtractivoElegido):
+    citas: list[str] = Field(description="Ids de los fragmentos (p. ej. «f2») que respaldan el motivo; [] si ninguno aplica")
+
+
+class DiaConCitas(Estricto):
+    numero: int
+    atractivos: list[AtractivoCitado] = Field(description="En el orden de visita")
+
+
+class ItinerarioConCitas(ItinerarioModelo):
+    """Igual que ItinerarioModelo, pero cada atractivo puede citar fragmentos del RAG. Es un esquema aparte porque
+    el modo estricto exige todos los campos: así el flujo sin RAG sigue pidiendo exactamente lo mismo que antes."""
+    dias: list[DiaConCitas]
+
+
 # ---------------------------------------------------------------- SALIDA AL CLIENTE
+class Cita(BaseModel):
+    """Fragmento de una fuente que respalda una actividad. Lo arma el CÓDIGO con el fragmento recuperado:
+    el modelo solo elige el id, nunca escribe el texto, la fuente ni la URL."""
+    fragmento_id: str
+    texto: str
+    fuente: str
+    url: str
+    tipo_fuente: str  # oficial (GAD), prensa, no oficial…
+    estado_verificacion: str
+
+
 class Actividad(BaseModel):
     orden: int
     atractivo_id: str
@@ -77,6 +103,7 @@ class Actividad(BaseModel):
     nota: str | None
     latitud: float | None  # None = sin marcador en el mapa (HU-03)
     longitud: float | None
+    citas: list[Cita] = []  # fragmentos del RAG que respaldan el motivo (puede venir vacía)
 
 
 class Clima(BaseModel):
@@ -125,3 +152,55 @@ class RespuestaItinerario(BaseModel):
     supuestos: list[str] = []
     advertencias: list[str] = []
     proveedor: str | None = None
+
+
+# ---------------------------------------------------------------- AGENTE (HU-08)
+MAX_ACTIVIDADES_POR_DIA = 15
+
+
+class MensajeChat(BaseModel):
+    """Un turno previo de la conversación (solo texto: lo que se reenvía al modelo como historial)."""
+    rol: Literal["visitante", "asistente"]
+    texto: str = Field(min_length=1, max_length=1000)
+
+
+class SolicitudAgente(BaseModel):
+    """Lo que envía la interfaz para conversar sobre un itinerario ya generado. La API no guarda la conversación:
+    el cliente reenvía el itinerario actual y, si quiere, los turnos anteriores."""
+    mensaje: str = Field(min_length=1, max_length=500, description="Lo que escribe el visitante")
+    itinerario: RespuestaItinerario = Field(description="El itinerario actual (tal como lo devolvió la API)")
+    solicitud: SolicitudItinerario | None = Field(
+        default=None, description="Los parámetros originales: el presupuesto se usa al recalcular costos")
+    historial: list[MensajeChat] = Field(default_factory=list, max_length=20)
+
+    @field_validator("itinerario")
+    @classmethod
+    def tamano_razonable(cls, v: RespuestaItinerario) -> RespuestaItinerario:
+        # Límites de tamaño (OWASP LLM10): el itinerario viaja al prompt en cada vuelta.
+        if len(v.dias) > 7 or any(len(d.actividades) > MAX_ACTIVIDADES_POR_DIA for d in v.dias):
+            raise ValueError(f"máximo 7 días y {MAX_ACTIVIDADES_POR_DIA} actividades por día")
+        return v
+
+
+class DecisionAgente(BaseModel):
+    aprobar: bool
+
+
+class Confirmacion(BaseModel):
+    """Acción detenida a la espera del visitante. `argumentos` son los REALES que se ejecutarán al aprobar."""
+    id: str
+    accion: str
+    argumentos: dict
+    descripcion: str
+    expira_en_s: int
+
+
+class RespuestaAgente(BaseModel):
+    estado: Literal["respondido", "requiere_confirmacion", "tope_alcanzado"]
+    respuesta: str | None
+    itinerario: RespuestaItinerario  # el actual, con los cambios aplicados en esta solicitud
+    cambios: list[str] = []          # lo que hizo `recalcular` (para resaltarlo en la interfaz)
+    fuentes: list[Cita] = []         # fragmentos que devolvió buscar_fragmentos (armados por el código)
+    confirmacion: Confirmacion | None = None
+    advertencias: list[str] = []     # p. ej. datos de la respuesta que el código no encontró en ninguna fuente
+    vueltas: int

@@ -1,0 +1,111 @@
+name: ci-cd
+
+# CI (revisión de secretos con Gitleaks + pruebas + construcción de la imagen): en cada push y pull request a develop o master.
+# CD (despliegue al VPS): solo al hacer push a master, o a mano desde la pestaña Actions.
+on:
+  push:
+    branches: [develop, master]
+  pull_request:
+    branches: [develop, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  secretos:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # historial completo: Gitleaks revisa también los commits anteriores
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      # Las pruebas no cargan el modelo de embeddings (el conftest apaga el RAG real):
+      # se omite sentence-transformers y no se descarga torch.
+      - name: Instalar dependencias
+        run: |
+          grep -v "sentence-transformers" requirements.txt > requirements-ci.txt
+          pip install -r requirements-ci.txt
+      # Cobertura de src/: el build falla por debajo del 85 % (RNF-14 pide al menos 70 %; hoy es 95 %)
+      - name: Ejecutar pruebas con cobertura
+        run: python -m pytest -q --cov=src --cov-report=term --cov-fail-under=85
+
+  imagen:
+    needs: pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Construir la imagen (sin publicarla)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  despliegue:
+    needs: [secretos, pruebas, imagen]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: despliegue-vps
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      # Los secretos llegan por variables de entorno (no se interpolan en el script) y sin \r: si se cargaron
+      # desde Windows con finales de línea CRLF, ssh rechazaría la llave con «invalid format».
+      - name: Preparar SSH
+        env:
+          LLAVE: ${{ secrets.VPS_SSH_KEY }}
+          HUELLA: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$LLAVE" | tr -d '\r' > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$HUELLA" | tr -d '\r' > ~/.ssh/known_hosts
+
+      # Se sube lo que la imagen necesita (las carpetas que copia el Dockerfile) y los datos versionados.
+      # El .env y el índice (data/vectorstore) viven en el servidor y no se tocan.
+      # Si el Dockerfile copia una carpeta nueva, hay que agregarla aquí: lo revisa tests/test_despliegue.py.
+      - name: Subir el código al VPS
+        run: |
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "cd /opt/planificador && rm -rf src config scripts data/catalogo data/corpus"
+          tar czf - src config scripts data/catalogo data/corpus requirements.txt Dockerfile .dockerignore docker-compose.yml \
+            | ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "tar xzf - -C /opt/planificador"
+
+      - name: Construir y reiniciar el contenedor
+        run: |
+          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "cd /opt/planificador && docker build -t planificador-api:latest . && docker compose up -d && docker image prune -f"
+
+      - name: Verificar que la API responde
+        run: |
+          for _ in $(seq 1 12); do
+            if curl -fsS "${{ secrets.APP_HEALTH_URL }}"; then echo; exit 0; fi
+            sleep 10
+          done
+          echo "La API no respondió después del despliegue"
+          exit 1
+
+      # Pruebas de humo contra producción con el modelo real (tests/smoke.py: salud, itinerario, agente, fuera de
+      # dominio, inyección, entrada inválida y confirmación). Solo biblioteca estándar: no necesita instalar nada.
+      - name: Pruebas funcionales contra la URL desplegada
+        env:
+          SALUD: ${{ secrets.APP_HEALTH_URL }}
+        run: python3 tests/smoke.py "${SALUD%/health}"

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "S14",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 15,
+    "citas": 3,
+    "costo_total_usd": 33.5,
+    "ms": 17856,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  }
+]
