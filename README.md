@@ -142,7 +142,8 @@ en `logs/agente.jsonl`.
 8. [ADR del agente](docs/09-decisiones.md)
 9. [Flujo automatizado](docs/10-automatizacion.md)
 10. [Plan de calidad](docs/11-plan-de-calidad.md)
-11. Evidencias: [Semana 1](docs/evidencias/semana-1/README.md) · [Semana 2](docs/evidencias/semana-2/README.md) · [Semana 3](docs/evidencias/semana-3/README.md) · [Evaluación de la Entrega 3](docs/evidencias/semana-3/evaluacion-entrega3.md)
+11. [Matriz de riesgos](docs/riesgos.md) · [ADR-0003: plataforma de despliegue](docs/adr/0003-plataforma-despliegue.md)
+12. Evidencias: [Semana 1](docs/evidencias/semana-1/README.md) · [Semana 2](docs/evidencias/semana-2/README.md) · [Semana 3](docs/evidencias/semana-3/README.md) · [Evaluación de la Entrega 3](docs/evidencias/semana-3/evaluacion-entrega3.md) · [Semana 4](docs/evidencias/semana-4/README.md)
 
 | Formulario | Resultado con mapa |
 |---|---|

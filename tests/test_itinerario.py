@@ -112,7 +112,9 @@ def con(llm):
 
 
 def test_health():
-    assert con(LLMFalso()).get("/health").json() == {"status": "ok"}
+    r = con(LLMFalso()).get("/health").json()
+    assert r["status"] == "ok" and r["version"] and r["rag"] == {"activo": False, "fragmentos": None}
+    assert set(r["modelo"]) == {"principal", "respaldo"}
 
 
 def test_itinerario_ok():

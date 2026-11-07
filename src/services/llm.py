@@ -95,12 +95,61 @@ ESPERA_MAXIMA_S = 20  # si el proveedor pide esperar más que esto, mejor ir al 
 ESPERA_MAXIMA_SIN_RESPALDO_S = 45  # sin respaldo no hay a dónde ir: se espera más antes de rendirse
 
 
+# ---------------------------------------------------------------- dialectos de JSON Schema
+# Groq acepta el esquema de Pydantic tal cual (modo estricto). Gemini acepta un subconjunto: no resuelve $ref/$defs y
+# rechaza algunas palabras clave. El esquema solo GUÍA al modelo: la validación la hace siempre Pydantic, así que
+# adaptarlo no afloja ningún control.
+_SIN_SOPORTE_GEMINI = {"$defs", "title", "additionalProperties", "default", "$schema"}
+
+
+def adaptar_esquema(esquema: dict, dialecto: str) -> dict:
+    if dialecto == "estricto":
+        return esquema
+    if dialecto != "gemini":
+        raise ValueError(f"dialecto de esquema desconocido: {dialecto}")
+    definiciones = esquema.get("$defs", {})
+
+    def resolver(nodo):
+        if isinstance(nodo, list):
+            return [resolver(x) for x in nodo]
+        if not isinstance(nodo, dict):
+            return nodo
+        if "$ref" in nodo:  # "#/$defs/Nombre" → la definición, copiada en su lugar
+            base = resolver(definiciones[nodo["$ref"].rsplit("/", 1)[-1]])
+            return {**base, **{k: resolver(v) for k, v in nodo.items() if k not in ("$ref", *_SIN_SOPORTE_GEMINI)}}
+        variantes = nodo.get("anyOf")
+        if isinstance(variantes, list) and len(variantes) == 2 and {"type": "null"} in variantes:
+            # `X | None` de Pydantic → X con nullable (forma que Gemini acepta)
+            otro = resolver(next(v for v in variantes if v != {"type": "null"}))
+            resto = {k: resolver(v) for k, v in nodo.items() if k != "anyOf" and k not in _SIN_SOPORTE_GEMINI}
+            return {**otro, **resto, "nullable": True}
+        return {k: resolver(v) for k, v in nodo.items() if k not in _SIN_SOPORTE_GEMINI}
+    return resolver(esquema)
+
+
+def formato_json(esquema: type[BaseModel], dialecto: str) -> dict:
+    """response_format con el esquema del modelo Pydantic, adaptado al dialecto del proveedor."""
+    return {"response_format": {"type": "json_schema", "json_schema": {
+        "name": esquema.__name__, "strict": True, "schema": adaptar_esquema(esquema.model_json_schema(), dialecto)}}}
+
+
+def tools_para(herramientas: list[dict], dialecto: str) -> list[dict]:
+    """Las mismas herramientas con sus `parameters` adaptados al dialecto (la lista cerrada no cambia)."""
+    if dialecto == "estricto":
+        return herramientas
+    return [{**h, "function": {**h["function"], "parameters": adaptar_esquema(h["function"]["parameters"], dialecto)}}
+            for h in herramientas]
+
+
 @dataclass(frozen=True)
 class LlamadaHerramienta:
     """Un pedido del modelo: NO es una ejecución. Ejecutarlo o no lo decide el código del agente."""
     id: str
     nombre: str
     argumentos: str  # JSON en texto, tal como lo escribió el modelo (sin validar)
+    # Campos propios del proveedor que hay que DEVOLVER tal cual en la vuelta siguiente. Gemini 3 adjunta
+    # extra_content.google.thought_signature y responde 400 si falta (prueba con Gemini real, 7 nov 2026).
+    extra: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -113,8 +162,8 @@ class MensajeModelo:
         """El mensaje `assistant` que se agrega al historial (formato Chat Completions)."""
         m: dict = {"role": "assistant", "content": self.contenido or ""}
         if self.llamadas:
-            m["tool_calls"] = [{"id": x.id, "type": "function", "function": {"name": x.nombre, "arguments": x.argumentos}}
-                               for x in self.llamadas]
+            m["tool_calls"] = [{"id": x.id, "type": "function", "function": {"name": x.nombre, "arguments": x.argumentos},
+                                **(x.extra or {})} for x in self.llamadas]
         return m
 
 
@@ -146,6 +195,12 @@ def _retry_after(error: Exception) -> float | None:
         return None
 
 
+def _extra(tool_call) -> dict | None:
+    """Campos de un tool_call que el SDK no conoce (p. ej. extra_content de Gemini), para devolverlos sin cambios."""
+    extra = getattr(tool_call, "model_extra", None)
+    return dict(extra) if extra else None
+
+
 def _limpiar_json(texto: str) -> str:
     """Algunos modelos envuelven el JSON en ```json … ```. Se lo quitamos."""
     texto = texto.strip()
@@ -169,7 +224,7 @@ class ClienteLLM:
     def _llamar(self, p: Proveedor, mensajes: list[dict], extra: dict) -> tuple[object, int, int]:
         cliente = self._clientes[p.nombre]
         opciones = {"max_tokens": self.config.max_tokens, **extra}
-        if self.config.razonamiento and p.nombre != "simulado":
+        if self.config.razonamiento and p.admite_razonamiento:
             opciones["reasoning_effort"] = self.config.razonamiento
         for intento in range(1, self.config.reintentos + 1):
             t0 = time.monotonic()
@@ -204,10 +259,11 @@ class ClienteLLM:
                 self.dormir(espera)
         raise _FalloProveedor()
 
-    def _con_respaldo(self, mensajes: list[dict], extra: dict):
+    def _con_respaldo(self, mensajes: list[dict], extra: dict | Callable[[Proveedor], dict]):
+        """`extra` puede depender del proveedor: el esquema JSON y las tools se adaptan a su dialecto."""
         for p in self.proveedores:
             try:
-                r, ms, intentos = self._llamar(p, mensajes, extra)
+                r, ms, intentos = self._llamar(p, mensajes, extra(p) if callable(extra) else extra)
                 return p, r, ms, intentos
             except _FalloProveedor:
                 continue
@@ -225,9 +281,10 @@ class ClienteLLM:
     def generar_con_herramientas(self, mensajes: list[dict], herramientas: list[dict]) -> Resultado[MensajeModelo]:
         """Una vuelta del agente: el modelo responde texto o PIDE herramientas (nunca las ejecuta).
         `mensajes` ya incluye el system. Mismos reintentos, respaldo y registro que las demás llamadas."""
-        p, r, ms, intentos = self._con_respaldo(mensajes, {"tools": herramientas, "tool_choice": "auto"})
+        p, r, ms, intentos = self._con_respaldo(
+            mensajes, lambda p: {"tools": tools_para(herramientas, p.esquema), "tool_choice": "auto"})
         msg = r.choices[0].message
-        llamadas = [LlamadaHerramienta(tc.id, tc.function.name, tc.function.arguments or "{}")
+        llamadas = [LlamadaHerramienta(tc.id, tc.function.name, tc.function.arguments or "{}", _extra(tc))
                     for tc in (getattr(msg, "tool_calls", None) or [])]
         uso = getattr(r, "usage", None)
         return Resultado(MensajeModelo(msg.content, llamadas), p.nombre, p.modelo,
@@ -235,8 +292,8 @@ class ClienteLLM:
 
     def generar_json(self, system: str, usuario: str, esquema: type[T]) -> Resultado[T]:
         """Pide JSON con un esquema y lo valida. Si no cumple, pide UNA corrección."""
-        formato = {"response_format": {"type": "json_schema", "json_schema": {
-            "name": esquema.__name__, "strict": True, "schema": esquema.model_json_schema()}}}
+        def formato(p: Proveedor) -> dict:
+            return formato_json(esquema, p.esquema)
         mensajes = [{"role": "system", "content": system}, {"role": "user", "content": usuario}]
         p, r, ms, intentos = self._con_respaldo(mensajes, formato)
         texto = r.choices[0].message.content
@@ -267,13 +324,9 @@ class ClienteLLM:
         ese esquema (el llamador lo valida al final). Solo se puede cambiar de proveedor ANTES del
         primer trozo: si falla a mitad del flujo no se mezclan dos respuestas."""
         completos = [{"role": "system", "content": system}, *mensajes]
-        extra: dict = {}
-        if esquema is not None:
-            extra["response_format"] = {"type": "json_schema", "json_schema": {
-                "name": esquema.__name__, "strict": True, "schema": esquema.model_json_schema()}}
         for p in self.proveedores:
-            opciones = dict(extra)
-            if self.config.razonamiento and p.nombre != "simulado":
+            opciones = formato_json(esquema, p.esquema) if esquema is not None else {}
+            if self.config.razonamiento and p.admite_razonamiento:
                 opciones["reasoning_effort"] = self.config.razonamiento
             enviados = 0
             t0 = time.monotonic()

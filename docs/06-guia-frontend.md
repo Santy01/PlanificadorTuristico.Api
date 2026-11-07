@@ -147,7 +147,8 @@ Para `intereses`, use casillas con las tres categorías del catálogo en lugar d
 |---|---|---|---|
 | 200 | Siempre que haya respuesta de negocio, incluso rechazos | `RespuestaItinerario` | Según `estado` |
 | 422 | Parámetros inválidos | `{"detail": [{"loc": ["body","dias"], "msg": "..."}]}` | Mensaje por campo usando `loc` |
-| 503 | El modelo no está disponible | `{"detail": "El asistente no está disponible..."}` | Mostrar `detail` y botón «Reintentar» |
+| 429 | La misma IP pasó su cupo (10 itinerarios o 20 mensajes al agente por minuto, en `config/parametros.yaml`) | `{"detail": "Demasiadas solicitudes seguidas. Intenta de nuevo en N segundos."}` y cabecera `Retry-After` | Mostrar `detail` y desactivar el botón de enviar hasta que pasen los segundos de `Retry-After` |
+| 503 | El modelo no está disponible | `{"detail": "El asistente no está disponible..."}` | Mostrar `detail` y botón «Reintentar». Llega cuando fallaron el proveedor principal (Groq) y el respaldo (Gemini) |
 | 500 | Falla de configuración del servidor | Sin cuerpo útil | «Ocurrió un problema. Inténtalo más tarde». No mostrar detalles técnicos |
 | Red caída | Sin respuesta | — | «No hay conexión con el servicio» y botón «Reintentar» |
 

@@ -21,7 +21,8 @@ def escribir(tmp_path, texto):
 
 def test_valores_desde_el_archivo(tmp_path):
     f = escribir(tmp_path, "itinerario: {jornada_max_h: 6, duracion_por_defecto_h: 1.5}\nrecalcular: {holgura_h: 0}\n"
-                           "agente: {max_iter: 4, confirmacion_ttl_min: 5, max_historial: 2}\n")
+                           "agente: {max_iter: 4, confirmacion_ttl_min: 5, max_historial: 2}\n"
+                           "limites: {ventana_s: 60, itinerario: 3, agente: 5, proxies_confiables: 1}\n")
     p = cargar_parametros(f)
     assert p.itinerario.jornada_max_h == 6 and p.recalcular.holgura_h == 0 and p.agente.max_iter == 4
 
