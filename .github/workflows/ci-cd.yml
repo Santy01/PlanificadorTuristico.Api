@@ -102,3 +102,10 @@ jobs:
           done
           echo "La API no respondió después del despliegue"
           exit 1
+
+      # Pruebas de humo contra producción con el modelo real (tests/smoke.py: salud, itinerario, agente, fuera de
+      # dominio, inyección, entrada inválida y confirmación). Solo biblioteca estándar: no necesita instalar nada.
+      - name: Pruebas funcionales contra la URL desplegada
+        env:
+          SALUD: ${{ secrets.APP_HEALTH_URL }}
+        run: python3 tests/smoke.py "${SALUD%/health}"

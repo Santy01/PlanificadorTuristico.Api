@@ -127,6 +127,13 @@ python eval/evaluar.py solicitudes --pausa 45
 python eval/evaluar.py agente --pausa 40
 ```
 
+**Pruebas funcionales contra la URL desplegada** (modelo real, sin clave en el cliente; también corren en el pipeline
+después de cada despliegue):
+
+```bash
+python tests/smoke.py https://planificador.bhsolutions.cloud
+```
+
 Cada llamada al modelo queda en `logs/llm.jsonl` (tokens y tiempo, sin el texto del usuario) y cada decisión del agente
 en `logs/agente.jsonl`.
 
