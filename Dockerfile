@@ -20,6 +20,7 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 ENV HF_HUB_OFFLINE=1
 
 COPY src ./src
+COPY config ./config
 COPY scripts ./scripts
 COPY data ./data
 
