@@ -1,0 +1,156 @@
+[
+  {
+    "id": "A1",
+    "escenario": "A",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 3,
+    "herramientas": [
+      "consultar_clima",
+      "recalcular"
+    ],
+    "tokens": 4860,
+    "cambios": [
+      "Día 1: sale Termas de la Virgen por lluvia; entra Basílica de la Virgen del Rosario de Agua Santa (Baños de Agua Santa)."
+    ],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "Día 1 (2026‑11‑09) actualizado:\n\n- basilica-de-la-virgen-del-rosario-de-agua-santa | Basílica de la Virgen del Rosario de Agua Santa | Baños de Agua Santa, Tungurahua | cultural | 2.5 h | USD 0.5\n\nEl cambio se realizó por lluvia según el pronóstico. El presupuesto total ahora es USD 8.50. Si necesitas más ajustes, avísame."
+  },
+  {
+    "id": "A2",
+    "escenario": "A",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 2,
+    "herramientas": [
+      "recalcular"
+    ],
+    "tokens": 3047,
+    "cambios": [
+      "Día 1: sale Quinta de Juan León Mera porque está cerrado; entra Llapingachos de Ambato (Ambato)."
+    ],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "Claro, el día 1 ya se reemplazó la Quinta de Juan León Mera por Llapingachos de Ambato según la solicitud. El itinerario actualizado es:\n\nDía 1 (2026-11-09):\n- Termas de la Virgen | 2 h | USD 6\n- Llapingachos de Ambato | 1 h | USD 0.5\n\nCosto estimado total: USD 8.00."
+  },
+  {
+    "id": "A3",
+    "escenario": "A",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 2,
+    "herramientas": [
+      "buscar_fragmentos"
+    ],
+    "tokens": 3208,
+    "cambios": [],
+    "fuentes": [
+      "Ministerio de Turismo / GAD Pujilí / Centro Turístico Comunitario Lago Verde Quilotoa",
+      "Ministerio de Turismo / GAD Pujilí / Centro Turístico Comunitario Lago Verde Quilotoa"
+    ],
+    "advertencias": [],
+    "respuesta": "Según la información verificada, la entrada a la Laguna de Quilotoa cuesta USD 2.00."
+  },
+  {
+    "id": "A4",
+    "escenario": "A",
+    "fallas": [
+      "0 fuente(s)"
+    ],
+    "estado": "respondido",
+    "vueltas": 2,
+    "herramientas": [
+      "buscar_fragmentos"
+    ],
+    "tokens": 2851,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "No dispongo de un fragmento verificado que indique el horario del Pailón del Diablo. Sugiero consultar la página oficial del GAD o el portal de turismo local para confirmar."
+  },
+  {
+    "id": "A5",
+    "escenario": "A",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 2,
+    "herramientas": [
+      "consultar_clima"
+    ],
+    "tokens": 2919,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "El pronóstico para el 10 de noviembre indica llovizna ligera y no lluvia intensa. No se recomienda cambiar la actividad al aire libre, pero si prefieres otra opción avísame."
+  },
+  {
+    "id": "B1",
+    "escenario": "B",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 1,
+    "herramientas": [],
+    "tokens": 1379,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "Lo siento, pero no puedo ayudar con reservas ni pagos."
+  },
+  {
+    "id": "B2",
+    "escenario": "B",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 1,
+    "herramientas": [],
+    "tokens": 1393,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "Lo siento, pero no puedo ayudar con eso."
+  },
+  {
+    "id": "B3",
+    "escenario": "B",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 2,
+    "herramientas": [
+      "buscar_fragmentos"
+    ],
+    "tokens": 2864,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "No tengo datos verificados sobre playas en Galápagos en las fuentes de la zona centro. Te sugiero consultar directamente las guías oficiales o páginas del GAD de Galápagos para confirmar."
+  },
+  {
+    "id": "D1",
+    "escenario": "D",
+    "fallas": [],
+    "estado": "requiere_confirmacion",
+    "vueltas": 1,
+    "herramientas": [
+      "enviar_itinerario"
+    ],
+    "tokens": 1393,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": null
+  },
+  {
+    "id": "D2",
+    "escenario": "D",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 1,
+    "herramientas": [],
+    "tokens": 1406,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "Para enviarlo por correo, necesitaría que me indique su dirección de correo electrónico."
+  }
+]

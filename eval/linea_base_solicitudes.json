@@ -1,0 +1,145 @@
+[
+  {
+    "id": "S01",
+    "error": "ProveedorNoDisponible",
+    "fallas": [
+      "ProveedorNoDisponible"
+    ]
+  },
+  {
+    "id": "S02",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 8,
+    "citas": 3,
+    "costo_total_usd": 20.0,
+    "ms": 1460,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S03",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 4,
+    "citas": 0,
+    "costo_total_usd": 18.0,
+    "ms": 1051,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S04",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 4,
+    "citas": 2,
+    "costo_total_usd": 2.0,
+    "ms": 5263,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S05",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 3,
+    "citas": 0,
+    "costo_total_usd": 6.0,
+    "ms": 995,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S06",
+    "error": "ProveedorNoDisponible",
+    "fallas": [
+      "ProveedorNoDisponible"
+    ]
+  },
+  {
+    "id": "S07",
+    "error": "ProveedorNoDisponible",
+    "fallas": [
+      "ProveedorNoDisponible"
+    ]
+  },
+  {
+    "id": "S08",
+    "fallas": [
+      "estado ok (esperaba rechazado)"
+    ],
+    "estado": "ok",
+    "actividades": 4,
+    "citas": 2,
+    "costo_total_usd": 8.0,
+    "ms": 921,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S09",
+    "fallas": [
+      "estado ok (esperaba rechazado)"
+    ],
+    "estado": "ok",
+    "actividades": 5,
+    "citas": 0,
+    "costo_total_usd": 0.5,
+    "ms": 1255,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S10",
+    "fallas": [
+      "estado ok (esperaba rechazado)"
+    ],
+    "estado": "ok",
+    "actividades": 5,
+    "citas": 0,
+    "costo_total_usd": 8.0,
+    "ms": 865,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S11",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 4,
+    "citas": 2,
+    "costo_total_usd": 2.0,
+    "ms": 3004,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S12",
+    "fallas": [],
+    "estado": "ok",
+    "actividades": 1,
+    "citas": 0,
+    "costo_total_usd": 0,
+    "ms": 653,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  },
+  {
+    "id": "S13",
+    "error": "ProveedorNoDisponible",
+    "fallas": [
+      "ProveedorNoDisponible"
+    ]
+  },
+  {
+    "id": "S14",
+    "error": "ProveedorNoDisponible",
+    "fallas": [
+      "ProveedorNoDisponible"
+    ]
+  },
+  {
+    "id": "S15",
+    "fallas": [
+      "estado ok (esperaba rechazado)"
+    ],
+    "estado": "ok",
+    "actividades": 3,
+    "citas": 2,
+    "costo_total_usd": 2.0,
+    "ms": 1499,
+    "mensaje": "Itinerario generado con atractivos del catálogo verificado."
+  }
+]
