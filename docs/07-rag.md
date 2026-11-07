@@ -134,7 +134,7 @@ El margen responde «¿cuántos?»; el piso responde «¿alguno?». La calibraci
 
 | Qué | Dónde | Resultado |
 |---|---|---|
-| Pruebas unitarias | [tests/test_indice.py](../tests/test_indice.py), [tests/test_rag.py](../tests/test_rag.py), [tests/test_itinerario_rag.py](../tests/test_itinerario_rag.py) | 109 pruebas en total pasan (con modelo y Chroma simulados) |
+| Pruebas unitarias | [tests/test_indice.py](../tests/test_indice.py), [tests/test_rag.py](../tests/test_rag.py), [tests/test_itinerario_rag.py](../tests/test_itinerario_rag.py) | Pasan con modelo y Chroma simulados (198 pruebas en todo el proyecto al cierre de la Entrega 3) |
 | Evaluación | [scripts/evaluar_rag.py](../scripts/evaluar_rag.py), [docs/evidencias/semana-3/README.md](evidencias/semana-3/README.md) | Recall 8/8 en recuperación (también con el piso); con Groq 16 citas válidas y 0 descartadas |
 | Calibración del piso | `python scripts/evaluar_rag.py calibracion` → [eval/calibracion_piso.json](../eval/calibracion_piso.json) | Ver 9.1 |
 
