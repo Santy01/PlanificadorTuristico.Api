@@ -17,6 +17,7 @@ from typing import Iterator
 
 from pydantic import ValidationError
 
+from src.alcance import revisar_alcance
 from src.catalogo import Atractivo
 from src.parametros import parametros
 from src.schemas import (
@@ -330,6 +331,8 @@ def generar_itinerario(llm: ClienteLLM, s: SolicitudItinerario, catalogo: dict[s
                        clima: ClienteClima | None = None, rag: ClienteRAG | None = None) -> RespuestaItinerario:
     """Lanza ProveedorNoDisponible si el modelo no responde; SalidaInvalida pasa a revisión humana.
     Si el RAG falla, el itinerario sale igual (sin citas) y se avisa."""
+    if (rechazo := revisar_alcance(s)) is not None:   # regla en código antes del modelo: cero tokens
+        return RespuestaItinerario(estado="rechazado", mensaje=rechazo.mensaje)
     rec, contexto, fragmentos, esquema, prompt = _con_rag(s, catalogo, rag)
     try:
         r = llm.generar_json(cargar_prompt(prompt), contexto, esquema)
@@ -363,6 +366,9 @@ def stream_itinerario(llm: ClienteLLM, s: SolicitudItinerario, catalogo: dict[st
       ("itinerario", respuesta)  el resultado YA validado por el código; es lo único que se debe dibujar
       ("error", mensaje)         si el proveedor no está disponible
     El texto en vivo es solo progreso: nada de él se muestra como definitivo sin pasar por armar_itinerario."""
+    if (rechazo := revisar_alcance(s)) is not None:
+        yield "itinerario", RespuestaItinerario(estado="rechazado", mensaje=rechazo.mensaje)
+        return
     acumulado: list[str] = []
     try:
         rec, contexto, fragmentos, esquema, prompt = _con_rag(s, catalogo, rag)

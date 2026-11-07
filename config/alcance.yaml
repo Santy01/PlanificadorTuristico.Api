@@ -1,0 +1,51 @@
+# Reglas de alcance (HU-09, RNF-07): se aplican EN CÓDIGO antes de llamar al modelo.
+#
+# Por qué: en la evaluación de la Entrega 3 el modelo aceptó 4 de 4 solicitudes fuera de alcance (Galápagos, reservar
+# y pagar, inyección, Montañita) aunque el prompt le pide rechazarlas. La regla las rechaza sin gastar tokens y deja
+# registro; el prompt sigue como segunda barrera para lo que la regla no reconoce.
+#
+# Cada patrón es una expresión regular que se busca en las NOTAS y los INTERESES del visitante, en minúsculas y
+# sin tildes (así «Galápagos» y «galapagos» son lo mismo). El punto de partida NO se revisa: salir de Guayaquil o de
+# Quito es válido. Cuidado con los falsos positivos: «Reserva de Producción de Fauna Chimborazo» es un atractivo de
+# la zona y «quiero pagar poco» es un presupuesto, no un pedido de pago. Ambos casos tienen prueba.
+
+reglas:
+  - nombre: reservas_y_pagos
+    patrones:
+      - '\breserv(ar|arme|ame|alo|ala|en|e)\b'
+      - '\breserva\s+(y|un|una|mi|el|la|los|las)\b'
+      - '\b(paga|pagalo|pagala|pague|paguen|cobra|cobrame|cobralo|cobrar)\b'
+      - '\btarjeta\b'
+      - '\bcompra(r|me)?\s+(las?\s+)?(entradas?|boletos?|tickets?|pasajes?)\b'
+    mensaje: >-
+      No puedo hacer reservas, compras ni pagos: solo planifico visitas a atractivos del catálogo verificado.
+      Consulte directamente con el establecimiento.
+
+  - nombre: fuera_de_la_zona
+    patrones:
+      - '\bgalapagos\b'
+      - '\bcuenca\b'
+      - '\bmontanita\b'
+      - '\bplayas?\b'
+      - '\b(machu\s*picchu|peru|colombia|paris|madrid|nueva\s+york|europa|estados\s+unidos)\b'
+      - '\b(amazonia|yasuni|oriente\s+ecuatoriano)\b'
+    mensaje: >-
+      Solo planifico itinerarios en la zona centro del Ecuador (Tungurahua, Chimborazo, Cotopaxi y Bolívar). Lo que
+      pide está fuera de esa zona.
+
+  - nombre: consejo_medico
+    patrones:
+      - '\b(medicina|medicamento|dosis|ibuprofeno|paracetamol|antibiotico|pastillas?)\b'
+      - '\b(sintomas?|diagnostico|tratamiento)\b'
+    mensaje: >-
+      No puedo dar consejo médico. Consulte a un profesional de la salud o al Ministerio de Salud Pública (línea 171).
+
+  - nombre: inyeccion
+    patrones:
+      - '\b(ignora|olvida|omite)\w*\s+(tus|las|todas|todo|cualquier)\b'
+      - '\b(instrucciones|reglas)\s+(del\s+)?sistema\b'
+      - '\b(revela|muestra|dime)\w*\s+(tu|el)\s+prompt\b'
+      - '\b(actua|comportate)\s+como\b'
+    mensaje: >-
+      La solicitud contiene instrucciones para cambiar el comportamiento del planificador; no se procesa.
+      Describa solo su viaje: días, presupuesto, intereses y lugares de la zona centro.
