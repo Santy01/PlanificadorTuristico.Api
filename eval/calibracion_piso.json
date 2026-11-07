@@ -16,7 +16,7 @@
     },
     {
       "consulta": "natural. quiero ver el volcán Chimborazo",
-      "mejor": 0.8929
+      "mejor": 0.8939
     },
     {
       "consulta": "cultural. el carnaval de Guaranda",
@@ -24,11 +24,11 @@
     },
     {
       "consulta": "gastronómico. probar el hornado de Riobamba",
-      "mejor": 0.9101
+      "mejor": 0.908
     },
     {
       "consulta": "natural. subir al volcán Cotopaxi",
-      "mejor": 0.882
+      "mejor": 0.8858
     },
     {
       "consulta": "cultural. artesanía textil de Salasaca",
@@ -52,11 +52,11 @@
     },
     {
       "consulta": "natural. algo tranquilo y con poco presupuesto",
-      "mejor": 0.8322
+      "mejor": 0.8292
     },
     {
       "consulta": "cultural. iglesias y museos en Riobamba",
-      "mejor": 0.8738
+      "mejor": 0.8743
     },
     {
       "consulta": "natural, gastronómico. aguas termales y comida típica",
@@ -106,7 +106,7 @@
     },
     {
       "consulta": "natural. Machu Picchu en Perú",
-      "mejor": 0.8525
+      "mejor": 0.8529
     },
     {
       "consulta": "gastronómico. receta de pizza italiana",
@@ -114,7 +114,7 @@
     },
     {
       "consulta": "cultural. museos de Madrid",
-      "mejor": 0.829
+      "mejor": 0.8322
     },
     {
       "consulta": "natural. selva amazónica en Yasuní",
@@ -122,7 +122,7 @@
     },
     {
       "consulta": "natural. cómo programar en Python",
-      "mejor": 0.8105
+      "mejor": 0.8103
     },
     {
       "consulta": "cultural. consejo médico para el dolor de cabeza",
@@ -156,7 +156,7 @@
     },
     {
       "consulta": "¿Dónde puedo comer hornado en Riobamba?",
-      "mejor": 0.9331
+      "mejor": 0.9291
     },
     {
       "consulta": "¿Se puede nadar en la laguna de Quilotoa?",
@@ -164,7 +164,7 @@
     },
     {
       "consulta": "¿Qué museos hay en Guaranda?",
-      "mejor": 0.8891
+      "mejor": 0.8886
     },
     {
       "consulta": "¿Hay aguas termales en Baños?",
@@ -186,7 +186,7 @@
     },
     {
       "consulta": "¿Qué medicina tomo para el soroche?",
-      "mejor": 0.8116
+      "mejor": 0.8218
     },
     {
       "consulta": "¿Cuál es la capital de Francia?",
