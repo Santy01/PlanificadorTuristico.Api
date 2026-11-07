@@ -8,3 +8,4 @@ pydantic>=2.7      # esquemas y validación de la salida del modelo
 chromadb>=0.5          # base vectorial local y persistente (RAG)
 sentence-transformers>=3.0  # embeddings multilingües locales
 pypdf>=4.0              # extracción de texto de PDF oficiales (corpus RAG)
+pyyaml>=6.0             # config/parametros.yaml
