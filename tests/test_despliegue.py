@@ -37,3 +37,17 @@ def test_lo_que_se_reemplaza_tambien_se_borra_antes():
     borrados = set(re.search(r"rm -rf ([^\"]+)\"", flujo).group(1).split())
     carpetas = {s for s in subidos_por_el_despliegue() if (RAIZ / s).is_dir()}
     assert carpetas <= borrados, f"se suben sin borrar antes: {carpetas - borrados}"
+
+
+def test_traefik_envia_a_la_api_todas_sus_rutas():
+    """Frontend y API comparten dominio: si un endpoint no está en la regla de Traefik, en producción lo atendería el
+    frontend (index.html) y la API nunca lo vería."""
+    from src.main import app
+    compose = (RAIZ / "docker-compose.yml").read_text(encoding="utf-8")
+    regla = re.search(r"routers\.planificador\.rule=(.+)", compose).group(1)
+    prefijos = re.findall(r"PathPrefix\(`([^`]+)`\)", regla)
+    exactas = re.findall(r"(?<!Prefix)Path\(`([^`]+)`\)", regla)
+    faltan = [r.path for r in app.routes
+              if not (r.path in exactas or any(r.path == p or r.path.startswith(p + "/") for p in prefijos))]
+    assert not faltan, f"rutas de la API que Traefik no le envía: {faltan}"
+    assert "routers.planificador.priority=100" in compose
