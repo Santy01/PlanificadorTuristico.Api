@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Sustentación · Grupo 4 · Planificador turístico</title>
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  :root {
+    --fondo: #f7f4ee; --tinta: #1f3b3d; --suave: #5b6b6c; --linea: #d9d3c7;
+    --verde: #2f6f6b; --verde-claro: #e3efe9; --acento: #e8875b; --acento-claro: #fbe6da;
+    --rojo: #b4473a; --rojo-claro: #f6e1dd; --oscuro: #173033;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", "Inter", Arial, sans-serif; color: var(--tinta); background: #ccc; }
+  .slide {
+    width: 1280px; height: 720px; padding: 56px 72px 48px; position: relative; overflow: hidden;
+    background: var(--fondo); page-break-after: always; break-after: page; display: flex; flex-direction: column;
+  }
+  .slide:last-child { page-break-after: auto; break-after: auto; }
+  .oscura { background: var(--oscuro); color: #eef3f1; }
+  .oscura .etq { color: #f2b392; }
+  .oscura .suave { color: #b9c9c6; }
+  .etq { font-size: 15px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--acento); font-weight: 700; margin: 0 0 10px; }
+  h1 { font-size: 54px; line-height: 1.08; margin: 0 0 18px; font-weight: 800; letter-spacing: -0.5px; }
+  h2 { font-size: 38px; line-height: 1.15; margin: 0 0 22px; font-weight: 800; letter-spacing: -0.3px; }
+  h3 { font-size: 21px; margin: 0 0 8px; }
+  p, li { font-size: 19px; line-height: 1.45; }
+  .suave { color: var(--suave); }
+  .pie { position: absolute; left: 72px; right: 72px; bottom: 20px; display: flex; justify-content: space-between;
+         font-size: 13px; color: var(--suave); border-top: 1px solid var(--linea); padding-top: 8px; }
+  .oscura .pie { border-color: #33504f; color: #9fb5b1; }
+  .tiempo { position: absolute; top: 28px; right: 72px; background: var(--acento-claro); color: #8a3e1b;
+            font-weight: 700; font-size: 15px; padding: 6px 14px; border-radius: 99px; }
+  .oscura .tiempo { background: #3a2a22; color: #f2b392; }
+  .grid { display: grid; gap: 18px; }
+  .g2 { grid-template-columns: 1fr 1fr; } .g3 { grid-template-columns: repeat(3, 1fr); } .g4 { grid-template-columns: repeat(4, 1fr); }
+  .tarjeta { background: #fff; border: 1px solid var(--linea); border-radius: 16px; padding: 18px 20px; }
+  .tarjeta p, .tarjeta li { font-size: 16.5px; margin: 0; }
+  .tarjeta ul { margin: 6px 0 0; padding-left: 20px; }
+  .num { font-size: 40px; font-weight: 800; color: var(--verde); line-height: 1; margin-bottom: 6px; }
+  .num small { font-size: 18px; color: var(--suave); font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; font-size: 16px; }
+  th { text-align: left; background: var(--oscuro); color: #fff; padding: 9px 12px; font-weight: 600; }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--linea); background: #fff; }
+  .ok { color: var(--verde); font-weight: 700; white-space: nowrap; }
+  .mal { color: var(--rojo); font-weight: 700; }
+  .chip { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 13.5px; font-weight: 700; }
+  .chip-v { background: var(--verde-claro); color: var(--verde); } .chip-a { background: var(--acento-claro); color: #8a3e1b; }
+  .chip-r { background: var(--rojo-claro); color: var(--rojo); }
+  .paso { display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: start; }
+  .paso .n { width: 44px; height: 44px; border-radius: 50%; background: var(--acento); color: #fff; font-weight: 800;
+             display: grid; place-items: center; font-size: 20px; }
+  .entrada { font-family: Consolas, monospace; background: var(--verde-claro); padding: 2px 8px; border-radius: 6px; font-size: 15.5px; }
+  .flujo { display: flex; align-items: stretch; gap: 10px; }
+  .caja { flex: 1; border-radius: 14px; padding: 12px 14px; font-size: 15px; line-height: 1.35; background: #fff; border: 2px solid var(--linea); }
+  .caja b { display: block; font-size: 16px; margin-bottom: 3px; }
+  .caja.c { border-color: var(--verde); } .caja.i { border-color: var(--acento); } .caja.p { border-color: #6b5fb5; }
+  .flecha { align-self: center; color: var(--suave); font-size: 26px; }
+  .leyenda { display: flex; gap: 18px; font-size: 14px; margin-top: 10px; color: var(--suave); }
+  .leyenda span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .lc::before { background: var(--verde); } .li::before { background: var(--acento); } .lp::before { background: #6b5fb5; }
+  img.captura { width: 100%; border-radius: 12px; border: 1px solid var(--linea); display: block; }
+  .barra { height: 12px; border-radius: 6px; background: var(--linea); position: relative; overflow: hidden; margin-top: 6px; }
+  .barra i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--verde); border-radius: 6px; }
+  .cita { border-left: 4px solid var(--acento); padding: 10px 16px; background: #fff; border-radius: 0 12px 12px 0; font-size: 17px; }
+  .respaldo { background: #fff4ec; border: 1px dashed var(--acento); }
+  table.compacta td, table.compacta th { padding: 5px 10px; font-size: 15px; }
+  .tarjeta.mini { padding: 12px 16px; } .tarjeta.mini .num { font-size: 30px; }
+  .tag-respaldo { position: absolute; top: 28px; left: 72px; font-size: 13px; font-weight: 700; color: #8a3e1b; }
+</style>
+</head>
+<body>
+
+<!-- 1 · PORTADA -->
+<section class="slide oscura">
+  <p class="etq" style="margin-top:40px">Seminario Ingeniería de Software con IA Generativa · UNIANDES · Módulo 4</p>
+  <h1 style="font-size:64px; max-width:1000px">Planificador turístico de la Zona Centro del Ecuador</h1>
+  <p style="font-size:24px; max-width:960px" class="suave">Itinerarios día por día con fuentes citadas, costos, clima y mapa,
+    más un asistente que ajusta el viaje sin salirse de su alcance.</p>
+  <div class="grid g3" style="margin-top:38px; max-width:1040px">
+    <div><p class="etq">Grupo 4</p><p style="margin:0">Kleber Tepud<br>César Vasquez<br>Kleber Suñiga</p></div>
+    <div><p class="etq">En producción</p><p style="margin:0">planificador.bhsolutions.cloud<br><span class="suave">API v0.4.2 · Web v1.1.0</span></p></div>
+    <div><p class="etq">Sustentación</p><p style="margin:0">Sábado 7 de noviembre de 2026<br><span class="suave">Docente: Heyler Fabio Guaza</span></p></div>
+  </div>
+  <div class="pie"><span>Repositorios: Santy01/PlanificadorTuristico.Api · Santy01/PlanificadorTuristico.Web</span><span>1 / 13</span></div>
+</section>
+
+<!-- 2 · PROBLEMA Y USUARIO -->
+<section class="slide">
+  <span class="tiempo">1 min · Kleber Tepud</span>
+  <p class="etq">Problema y usuario</p>
+  <h2>Planificar la sierra central toma horas, y la información está dispersa y desactualizada</h2>
+  <div class="grid g3">
+    <div class="tarjeta"><h3>Para quién</h3><p>Visitantes nacionales y extranjeros que quieren recorrer Tungurahua, Chimborazo,
+      Cotopaxi y Bolívar en 1 a 7 días, con un presupuesto definido.</p></div>
+    <div class="tarjeta"><h3>El problema</h3><p>Horarios, precios y accesos están repartidos en páginas de GAD, prensa y blogs.
+      Un chatbot genérico inventa atractivos, precios y horarios con total seguridad.</p></div>
+    <div class="tarjeta"><h3>Lo que hacemos</h3><p>Un itinerario por día armado <b>solo</b> con un catálogo verificado de
+      139 atractivos, con la fuente de cada dato, costos, clima del día y mapa.</p></div>
+  </div>
+  <div class="cita" style="margin-top:24px">Regla de todo el proyecto: <b>el modelo propone, el código dispone.</b> La IA elige
+    atractivos y redacta; el código valida contra el catálogo, calcula costos y horas, y decide lo que es exacto o riesgoso.</div>
+  <div class="pie"><span>HU-01 a HU-09 · docs/02-requisitos.md</span><span>2 / 13</span></div>
+</section>
+
+<!-- 3 · DEMO EN VIVO -->
+<section class="slide">
+  <span class="tiempo">4 min · Kleber Tepud</span>
+  <p class="etq">Demo en vivo · sobre la URL pública</p>
+  <h2>https://planificador.bhsolutions.cloud</h2>
+  <div class="grid" style="gap:16px">
+    <div class="paso"><div class="n">1</div><div><h3>Caso normal con cita</h3>
+      <p>Formulario: 2 días · USD 100 · Latacunga · Naturaleza · notas <span class="entrada">Me interesa la laguna de Quilotoa</span> ·
+      fecha. Mostrar el itinerario por día, el mapa, los costos y en una actividad <b>«Lo que respalda este motivo» → Ver fragmento citado</b>.</p></div></div>
+    <div class="paso"><div class="n">2</div><div><h3>Pregunta fuera de tema: se abstiene</h3>
+      <p>En el asistente: <span class="entrada">¿Qué playas hay en Galápagos?</span> → responde que no tiene información
+      verificada, sin inventar y sin fuentes. (En el formulario, «playas de Galápagos» se rechaza antes de llamar al modelo.)</p></div></div>
+    <div class="paso"><div class="n">3</div><div><h3>Acción con confirmación humana</h3>
+      <p>En el asistente: <span class="entrada">Envíame el itinerario a demo@example.com</span> → aparece la tarjeta con la
+      descripción real → <b>Aprobar</b> → «enviado (simulado)». Extra: <b>Quitar</b> una actividad y ver que el asistente
+      reemplaza solo esa visita.</p></div></div>
+  </div>
+  <p class="suave" style="font-size:15px; margin-top:14px">Plan B si la plataforma falla: «la plataforma está despertando; mientras tanto, esta es la
+    grabación de hoy» → video de 2 minutos y capturas en docs/evidencias/semana-4/.</p>
+  <div class="pie"><span>10 minutos antes: abrir /health para despertar la app y hacer una pregunta de prueba</span><span>3 / 13</span></div>
+</section>
+
+<!-- 4 · ARQUITECTURA -->
+<section class="slide">
+  <span class="tiempo">2 min · César Vasquez</span>
+  <p class="etq">Arquitectura</p>
+  <h2>Un flujo fijo para generar y un agente solo donde el camino no se puede escribir</h2>
+  <div class="flujo">
+    <div class="caja"><b>Angular 22</b>Formulario, itinerario, mapa Leaflet y asistente. nginx en Docker.</div>
+    <div class="flecha">→</div>
+    <div class="caja"><b>Traefik · HTTPS</b>Mismo dominio: rutas de la API → API; el resto → web. Sin CORS.</div>
+    <div class="flecha">→</div>
+    <div class="caja c"><b>Regla de alcance</b>Reservas, pagos, médico, inyección y fuera de la zona: rechazo sin gastar tokens.</div>
+    <div class="flecha">→</div>
+    <div class="caja c"><b>RAG</b>Chroma + E5 local. Piso de similitud: si nada se parece, no hay fuentes.</div>
+    <div class="flecha">→</div>
+    <div class="caja i"><b>Modelo</b>Groq gpt-oss-20b. Respaldo: Gemini 3.5 Flash. JSON con esquema estricto.</div>
+    <div class="flecha">→</div>
+    <div class="caja c"><b>Código dispone</b>Valida contra el catálogo, jornada, costos, citas y clima (Open-Meteo).</div>
+  </div>
+  <div class="grid g2" style="margin-top:22px">
+    <div class="tarjeta"><h3>Agente de alcance controlado (POST /agente)</h3>
+      <ul><li><b>Lista cerrada:</b> recalcular, buscar_fragmentos, consultar_clima y enviar_itinerario</li>
+      <li><b>Tope:</b> 6 vueltas; al llegar, «lo revisa un asesor»</li>
+      <li><b>Confirmación:</b> enviar espera Aprobar/Rechazar, una sola vez</li></ul></div>
+    <div class="tarjeta"><h3>Controles en código, no en el prompt</h3>
+      <ul><li>Argumentos validados con Pydantic antes de ejecutar</li>
+      <li>Horas y montos de la respuesta contrastados con las fuentes</li>
+      <li>El correo debe ser uno que escribió el visitante</li></ul></div>
+  </div>
+  <div class="leyenda"><span class="lc">decide el código</span><span class="li">decide la IA</span><span class="lp">decide la persona (confirmación)</span></div>
+  <div class="pie"><span>docs/03-arquitectura.md · docs/09-decisiones.md (ADR del agente) · docs/10-automatizacion.md</span><span>4 / 13</span></div>
+</section>
+
+<!-- 5 · EVIDENCIAS: PRUEBAS CONTRA LA URL -->
+<section class="slide">
+  <span class="tiempo">1 min · César Vasquez</span>
+  <p class="etq">Evidencias · pruebas funcionales contra la URL pública</p>
+  <h2>8 de 8 casos pasan contra la URL pública</h2>
+  <div class="grid" style="grid-template-columns: 1.25fr 1fr; gap:26px">
+    <table class="compacta">
+      <tr><th>#</th><th>Tipo</th><th>Caso</th><th>Resultado</th></tr>
+      <tr><td>1</td><td>salud</td><td>GET /health</td><td class="ok">200 · 0.2 s</td></tr>
+      <tr><td>2</td><td>caso</td><td>Itinerario con Quilotoa</td><td class="ok">200 · 1.5 s</td></tr>
+      <tr><td>3</td><td>caso</td><td>1 día cultural en Riobamba</td><td class="ok">200 · 14.3 s</td></tr>
+      <tr><td>4</td><td>fuera</td><td>Playas de Galápagos → rechazo</td><td class="ok">200 · 0.1 s</td></tr>
+      <tr><td>5</td><td>inyección</td><td>«Ignora tus instrucciones…»</td><td class="ok">200 · 0.1 s</td></tr>
+      <tr><td>6</td><td>inválida</td><td>Cuerpo vacío → 422</td><td class="ok">422 · 0.1 s</td></tr>
+      <tr><td>7</td><td>caso</td><td>Pregunta al agente con fuente</td><td class="ok">200 · 1.3 s</td></tr>
+      <tr><td>8</td><td>confirmación</td><td>Enviar → requiere aprobación</td><td class="ok">200 · 0.5 s</td></tr>
+    </table>
+    <div>
+      <div class="tarjeta" style="margin-bottom:14px"><div class="num">8/8 <small>pasan · p95 14.3 s</small></div>
+        <p>tests/smoke.py, con el modelo real y sin claves en el cliente. Lo corre el pipeline tras cada despliegue (API v0.4.2).
+          El caso 3 tardó 14 s por reintentos ante el límite por minuto del proveedor.</p></div>
+      <img class="captura" src="../evidencias/semana-4/captura-03-pipeline-api-verde.png" alt="Pipeline en verde: secretos, pruebas, imagen y despliegue" style="height:200px; object-fit:cover; object-position:top left">
+    </div>
+  </div>
+  <div class="pie"><span>Los casos 4 y 5 tardan 0.1 s: los rechaza la regla de alcance sin llamar al modelo</span><span>5 / 13</span></div>
+</section>
+
+<!-- 6 · EVIDENCIAS: EVALUACIÓN FRENTE A LA SEMANA 3 -->
+<section class="slide">
+  <span class="tiempo">1 min · César Vasquez</span>
+  <p class="etq">Evidencias · evaluación final frente a la semana 3</p>
+  <h2>Lo esperado se escribió antes; medir encontró 4 fallas</h2>
+  <table class="compacta">
+    <tr><th>Qué se mide</th><th>Antes (semana 3 / línea base)</th><th>Final</th><th>Qué lo cambió</th></tr>
+    <tr><td>RAG: la fuente esperada aparece (11 preguntas)</td><td>82 %</td><td class="ok">100 %</td><td>El agente busca en el catálogo completo, no en el reducido</td></tr>
+    <tr><td>RAG: silencio cuando no hay respuesta (4 preguntas)</td><td>no se podía: sin piso, la búsqueda nunca callaba</td><td class="ok">100 %</td><td>Piso de similitud calibrado (0.86 para preguntas)</td></tr>
+    <tr><td>Solicitudes que cumplen lo esperado (15)</td><td>6 / 15</td><td class="ok">14 / 15</td><td>Regla de alcance; S14 pasa corrida aparte (cuota)</td></tr>
+    <tr><td>Adversarias rechazadas (Galápagos, reservar, inyección, Montañita)</td><td class="mal">0 / 4</td><td class="ok">4 / 4</td><td>El modelo aceptaba todas: regla en código antes del modelo</td></tr>
+    <tr><td>Agente: casos que cumplen (escenarios A, B y D)</td><td>9 / 10</td><td class="ok">10 / 10</td><td>Correo inventado bloqueado; catálogo completo</td></tr>
+    <tr><td>Vueltas del agente (tope 6) · tokens por caso</td><td colspan="2">media 1.6 · máximo 3 · ~2 400 tokens</td><td>El tope nunca se alcanzó con el modelo real</td></tr>
+  </table>
+  <div class="grid g3" style="margin-top:12px">
+    <div class="tarjeta mini"><div class="num">234 <small>pruebas API</small></div><p>Cobertura 95 % (el CI falla bajo 85 %)</p></div>
+    <div class="tarjeta mini"><div class="num">37 <small>pruebas web</small></div><p>Vitest: mapeos, errores y asistente</p></div>
+    <div class="tarjeta mini"><div class="num">0 <small>atractivos inventados</small></div><p>En todas las evaluaciones (RNF-06)</p></div>
+  </div>
+  <div class="pie"><span>eval/*.jsonl · eval/linea_base_*.json · docs/evidencias/semana-3/evaluacion-entrega3.md · docs/11-plan-de-calidad.md</span><span>6 / 13</span></div>
+</section>
+
+<!-- 7 · SEGURIDAD -->
+<section class="slide">
+  <span class="tiempo">1 min · Kleber Suñiga</span>
+  <p class="etq">Seguridad</p>
+  <h2>Las claves viven solo en la plataforma; si el modelo falla, la app lo dice</h2>
+  <div class="grid g2">
+    <div class="tarjeta"><h3>Dónde viven las claves</h3>
+      <ul><li>Groq y Gemini: solo en <b>/opt/planificador/.env</b> del VPS (chmod 600); nunca en git ni en la imagen</li>
+      <li>Despliegue: 5 secrets de GitHub Actions por repositorio, con una llave SSH distinta para cada uno</li>
+      <li><b>Gitleaks</b> sobre todo el historial en cada push: sin hallazgos. Un valor de prueba con forma de clave se detectó y se corrigió <b>antes</b> de publicarlo</li>
+      <li><span class="entrada">.env.example</span> solo con nombres</li></ul></div>
+    <div class="tarjeta"><h3>Cuando el modelo falla</h3>
+      <ul><li><b>Tiempo límite</b> de 30 s en cada llamada</li>
+      <li><b>Reintentos</b> con espera exponencial; respeta Retry-After</li>
+      <li><b>Respaldo:</b> Groq → Gemini, probado con Groq caído y a mitad de una conversación</li>
+      <li><b>Mensaje claro</b> (503), nunca la traza del error</li>
+      <li><b>Límite por IP:</b> 10 itinerarios y 20 mensajes por minuto → 429 con cuenta regresiva</li></ul></div>
+  </div>
+  <div class="cita" style="margin-top:18px">OWASP 2026: inyección (LLM01/ASI01) → regla de alcance y datos delimitados · agencia excesiva
+    (LLM06/ASI02) → lista cerrada y confirmación · desinformación (LLM09) → citas validadas y verificación de datos.</div>
+  <div class="pie"><span>docs/riesgos.md (9 riesgos, 5 ya ocurrieron en pruebas) · docs/adr/0003-plataforma-despliegue.md</span><span>7 / 13</span></div>
+</section>
+
+<!-- 8 · LIMITACIONES -->
+<section class="slide">
+  <span class="tiempo">2 min · Kleber Suñiga</span>
+  <p class="etq">Limitaciones · dichas con honestidad</p>
+  <h2>Lo que todavía no hace, o hace a medias</h2>
+  <div class="grid g2" style="gap:14px 22px">
+    <div class="tarjeta"><h3>Cuota de los planes gratuitos</h3><p>Groq y Gemini tienen límites por minuto y por día. El 7 de
+      noviembre se agotaron por las pruebas: con ambos sin cuota, la API responde 503. Falta separar claves de desarrollo y producción.</p></div>
+    <div class="tarjeta"><h3>Una corrida por caso</h3><p>La evaluación no mide cuánto varía el modelo entre corridas;
+      el agente inventó un correo en una corrida y lo pidió en otra.</p></div>
+    <div class="tarjeta"><h3>El piso no separa todo</h3><p>«natural» puntúa igual que «playas de Galápagos» (0.838 vs 0.839).
+      Lo ajeno a la zona lo frena la regla de alcance, que es una lista de patrones.</p></div>
+    <div class="tarjeta"><h3>Catálogo</h3><p>60 atractivos verificados por el equipo; de los otros 79, muchos costos siguen
+      «por verificar». No distingue eventos con fecha (la Fiesta de las Flores es en febrero).</p></div>
+    <div class="tarjeta"><h3>Alcance funcional</h3><p>El envío por correo es simulado; no optimiza la ruta ni geocodifica el
+      punto de partida; la verificación de datos cubre horas y montos, no todo el texto.</p></div>
+    <div class="tarjeta"><h3>Operación</h3><p>Un solo servidor y un proceso: las acciones pendientes y el límite por IP viven
+      en memoria. Gemini puede tardar 11–66 s cuando está saturado.</p></div>
+  </div>
+  <div class="pie"><span>README.md «Lo que NO hace todavía» · docs/11-plan-de-calidad.md §4</span><span>8 / 13</span></div>
+</section>
+
+<!-- 9 · LOS SEIS ENTREGABLES -->
+<section class="slide">
+  <p class="etq">Cierre · los seis entregables del Complexivo</p>
+  <h2>Cada entregable, con su evidencia</h2>
+  <table class="compacta">
+    <tr><th>Entregable</th><th>Evidencia</th><th>Dónde</th></tr>
+    <tr><td><b>Producto final operativo</b></td><td>Itinerario con citas, abstención y asistente en la URL pública</td><td>planificador.bhsolutions.cloud</td></tr>
+    <tr><td><b>Integración IA estable</b></td><td>Tiempo límite, reintentos, respaldo Gemini, 503 claro, límite por IP (429)</td><td>src/services/llm.py · src/limites.py</td></tr>
+    <tr><td><b>Despliegue</b></td><td>HTTPS con /health, Dockerfile, pipeline: Gitleaks → pruebas → imagen → despliegue</td><td>.github/workflows/ci-cd.yml (ambos repos)</td></tr>
+    <tr><td><b>Documentación técnica</b></td><td>README con URL, instalación, resultados, ADR y limitaciones</td><td>README.md · docs/</td></tr>
+    <tr><td><b>Pruebas funcionales</b></td><td>8 casos contra la URL, incluida la inyección: 8/8</td><td>tests/smoke.py · docs/evidencias/semana-4/</td></tr>
+    <tr><td><b>Protección de credenciales</b></td><td>Claves solo en el VPS y en GitHub Secrets; Gitleaks sin hallazgos</td><td>docs/evidencias/semana-4/ §1</td></tr>
+  </table>
+  <div class="grid g2" style="margin-top:18px; align-items:center">
+    <img class="captura" src="../evidencias/semana-4/captura-02-app-produccion.png" alt="La aplicación en producción" style="height:150px; object-fit:cover; object-position:top">
+    <p style="font-size:22px; margin:0"><b>Gracias.</b><br><span class="suave">Preguntas del tribunal: cualquiera de los tres responde
+      por cualquier parte.</span></p>
+  </div>
+  <div class="pie"><span>Grupo 4 · Kleber Tepud · César Vasquez · Kleber Suñiga</span><span>9 / 13</span></div>
+</section>
+
+<!-- 10 · RESPALDO: POR QUÉ ASÍ -->
+<section class="slide respaldo">
+  <span class="tag-respaldo">DIAPOSITIVA DE RESPALDO · para las preguntas</span>
+  <p class="etq" style="margin-top:18px">¿Por qué así y no de otra forma?</p>
+  <h2>Cada decisión, con la alternativa descartada y un dato</h2>
+  <table>
+    <tr><th>Decisión</th><th>Alternativa descartada</th><th>Dato que la respalda</th></tr>
+    <tr><td>Generar con un <b>flujo fijo</b>; agente solo para ajustar</td><td>Que el agente arme todo el itinerario</td><td>Los pasos son siempre los mismos: 1 llamada (~2 700 tokens) frente a varias vueltas</td></tr>
+    <tr><td><b>Regla de alcance en código</b> antes del modelo</td><td>Confiar en la instrucción del prompt</td><td>El modelo aceptó 0 de 4 adversarias; con la regla, 4 de 4 y 0 tokens</td></tr>
+    <tr><td><b>Chroma local + E5-small</b></td><td>Qdrant o pgvector como servicio</td><td>~140 atractivos y 251 fragmentos no justifican un servicio aparte</td></tr>
+    <tr><td><b>Gemini</b> como respaldo</td><td>Solo reintentar Groq</td><td>En producción Groq pidió esperar 23 s; con respaldo se responde igual</td></tr>
+    <tr><td><b>VPS propio</b> con Traefik</td><td>Render, Cloud Run, Azure</td><td>Render: 512 MB no alcanzan para torch + E5 (~470 MB); el VPS ya existía</td></tr>
+    <tr><td><b>Mismo dominio</b> para web y API</td><td>Subdominio + CORS</td><td>Sin CORS y la API ve la IP real del visitante para el límite</td></tr>
+    <tr><td><b>Confirmación</b> solo para enviar</td><td>Confirmar también recalcular</td><td>Recalcular no sale del sistema y se ve en pantalla; enviar no se puede deshacer</td></tr>
+  </table>
+  <div class="pie"><span>docs/09-decisiones.md · docs/adr/0003-plataforma-despliegue.md · docs/07-rag.md</span><span>10 / 13</span></div>
+</section>
+
+<!-- 11 · RESPALDO: HALLAZGOS -->
+<section class="slide respaldo">
+  <span class="tag-respaldo">DIAPOSITIVA DE RESPALDO · para las preguntas</span>
+  <p class="etq" style="margin-top:18px">Lo que encontramos al medir, y cómo se corrigió</p>
+  <h2>Ninguna de estas fallas se veía en la demo; todas salieron de pruebas reales</h2>
+  <div class="grid g2" style="gap:14px 22px">
+    <div class="tarjeta"><h3>Horario inventado</h3><p>«Según la ficha oficial abre de 9:00 a 19:00» y la ficha no trae horario.
+      → El código contrasta horas y montos con las fuentes; pide una corrección o avisa.</p></div>
+    <div class="tarjeta"><h3>Correo inventado</h3><p>Con «mándamelo por correo» el agente pidió enviar a una dirección que nadie
+      escribió. → El correo debe aparecer en lo que escribió el visitante.</p></div>
+    <div class="tarjeta"><h3>Respaldo roto a mitad de conversación</h3><p>Gemini 3 rechazaba (400) los pedidos de herramientas
+      que había hecho Groq: faltaba la firma de pensamiento. → Firma documentada por Google; probado con ambos modelos.</p></div>
+    <div class="tarjeta"><h3>El despliegue habría fallado</h3><p>El pipeline no subía <span class="entrada">config/</span> al VPS.
+      → Corregido, y una prueba compara lo que copia el Dockerfile con lo que se sube.</p></div>
+    <div class="tarjeta"><h3>Excel dañó el catálogo</h3><p>Coordenadas sin punto (-1.3982 → -13.982), «;» y codificación de DOS.
+      → Script de importación con reglas y 18 validaciones en el CI.</p></div>
+    <div class="tarjeta"><h3>4 de 4 adversarias aceptadas</h3><p>El prompt pedía rechazarlas y el modelo no lo hacía.
+      → Regla de alcance en código, con pruebas de falsos positivos.</p></div>
+  </div>
+  <div class="pie"><span>docs/evidencias/semana-3/evaluacion-entrega3.md · docs/evidencias/semana-4/README.md</span><span>11 / 13</span></div>
+</section>
+
+<!-- 12 · RESPALDO: USO DE IA -->
+<section class="slide respaldo">
+  <span class="tag-respaldo">DIAPOSITIVA DE RESPALDO · si preguntan qué generó la IA</span>
+  <p class="etq" style="margin-top:18px">Uso de IA generativa en el desarrollo</p>
+  <h2>Qué se generó, cómo se revisó y qué lo respalda</h2>
+  <div class="grid g3">
+    <div class="tarjeta"><h3>Qué se generó con IA</h3><ul>
+      <li>Código del backend y del frontend con un asistente de programación con IA (Claude Code)</li>
+      <li>Pruebas, scripts de evaluación y documentación</li>
+      <li>Las decisiones de alcance, las prioridades y los datos del catálogo los definió y verificó el equipo</li></ul></div>
+    <div class="tarjeta"><h3>Cómo se revisó</h3><ul>
+      <li>Pull requests por tarea con CI obligatorio</li>
+      <li>Evaluación con lo esperado escrito <b>antes</b> de correr</li>
+      <li>Pruebas contra el modelo real y contra producción</li>
+      <li>Gitleaks en cada push</li></ul></div>
+    <div class="tarjeta"><h3>Qué lo respalda y qué se corrigió</h3><ul>
+      <li>234 pruebas en la API, 37 en la web, 95 % de cobertura</li>
+      <li>Fallas encontradas al medir y corregidas: diapositiva 11</li>
+      <li>Errores del código generado detectados en la revisión (p. ej. el estado del asistente permitía confirmar dos veces) y cubiertos después con una prueba</li></ul></div>
+  </div>
+  <div class="cita" style="margin-top:22px">Criterio: nada generado se acepta sin una prueba que lo respalde; cuando una prueba
+    falla, se corrige el código, no la prueba (salvo que la prueba estuviera mal, y entonces se documenta).</div>
+  <div class="pie"><span>Historial de commits y pull requests en ambos repositorios</span><span>12 / 13</span></div>
+</section>
+
+<!-- 13 · RESPALDO: REPARTO Y GUION DE TIEMPOS -->
+<section class="slide respaldo">
+  <span class="tag-respaldo">GUÍA INTERNA DEL GRUPO · reparto de tramos (propuesto)</span>
+  <p class="etq" style="margin-top:18px">12 minutos exactos</p>
+  <h2>Quién presenta qué</h2>
+  <table>
+    <tr><th>Minuto</th><th>Tramo</th><th>Presenta</th><th>Diapositiva</th></tr>
+    <tr><td>0 – 1</td><td>Problema y usuario</td><td>Kleber Tepud</td><td>2</td></tr>
+    <tr><td>1 – 5</td><td>Demo en vivo: cita · abstención · confirmación (+ Quitar)</td><td>Kleber Tepud</td><td>3</td></tr>
+    <tr><td>5 – 7</td><td>Arquitectura y agente</td><td>César Vasquez</td><td>4</td></tr>
+    <tr><td>7 – 9</td><td>Evidencias: pruebas contra la URL y evaluación</td><td>César Vasquez</td><td>5 y 6</td></tr>
+    <tr><td>9 – 10</td><td>Seguridad</td><td>Kleber Suñiga</td><td>7</td></tr>
+    <tr><td>10 – 12</td><td>Limitaciones y cierre</td><td>Kleber Suñiga</td><td>8 y 9</td></tr>
+  </table>
+  <div class="grid g2" style="margin-top:18px">
+    <div class="tarjeta"><h3>Antes de entrar</h3><ul>
+      <li>Ensayar con reloj y grabar el video de 2 minutos (plan B)</li>
+      <li>−30 min: abiertos la URL, el repositorio, este PDF y el video</li>
+      <li>−10 min: abrir /health y hacer una pregunta de prueba</li></ul></div>
+    <div class="tarjeta"><h3>No hacer</h3><ul>
+      <li>No mostrar el .env, claves ni la consola del VPS al compartir pantalla</li>
+      <li>No correr evaluaciones el día de la sustentación: gastan la cuota de la demo</li></ul></div>
+  </div>
+  <div class="pie"><span>Observaciones del tribunal → docs/evidencias/semana-4/ · versión final: lunes 9, 23h59</span><span>13 / 13</span></div>
+</section>
+
+</body>
+</html>
