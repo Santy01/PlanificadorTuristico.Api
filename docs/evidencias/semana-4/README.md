@@ -152,3 +152,27 @@ de Groq: «Sí, para el día 1 se pronostican chubascos con lluvia intensa (88 %
 **Lección:** el respaldo protege contra la caída de Groq, pero el plan gratuito de Gemini también se satura (503 por
 alta demanda, latencias de hasta 66 s en las pruebas). Con los dos planes gratuitos agotados, la API responde 503 con
 un mensaje claro, que es el comportamiento esperado.
+
+## 6. Sustentación (sábado 7 de noviembre)
+
+- **Presentación:** [docs/sustentacion-grupo4.pdf](../../sustentacion-grupo4.pdf) (13 diapositivas: 9 para los 12 minutos y 4
+  de respaldo para las preguntas). Fuente editable: `docs/presentacion/sustentacion-grupo4.html`.
+- **Capturas pedidas para la sustentación:**
+  - `/health` en la URL pública: [captura-01-health-produccion.png](captura-01-health-produccion.png)
+  - La aplicación en producción: [captura-02-app-produccion.png](captura-02-app-produccion.png)
+  - Pipeline en verde (secretos, pruebas, imagen y despliegue de la v0.4.2): [captura-03-pipeline-api-verde.png](captura-03-pipeline-api-verde.png)
+- **Pruebas contra la URL** (pipeline del despliegue v0.4.2):
+
+```
+PASA  1. [salud] GET /health -> 200 en 0.2 s
+PASA  2. [caso] POST /itinerario -> 200 en 1.5 s
+PASA  3. [caso] POST /itinerario -> 200 en 14.3 s
+PASA  4. [fuera] POST /itinerario -> 200 en 0.1 s
+PASA  5. [inyeccion] POST /itinerario -> 200 en 0.1 s
+PASA  6. [invalida] POST /itinerario -> 422 en 0.1 s
+PASA  7. [caso] POST /agente -> 200 en 1.3 s
+PASA  8. [confirmacion] POST /agente -> 200 en 0.5 s
+RESULTADO: 8/8 pasan · p95 14.3 s · más lento 14.3 s
+```
+
+- **Observaciones del tribunal:** se anotan aquí después del turno (pendiente).
