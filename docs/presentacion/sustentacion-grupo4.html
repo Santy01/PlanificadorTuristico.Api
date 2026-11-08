@@ -83,12 +83,11 @@
     <div><p class="etq">En producción</p><p style="margin:0">planificador.bhsolutions.cloud<br><span class="suave">API v0.4.2 · Web v1.1.0</span></p></div>
     <div><p class="etq">Sustentación</p><p style="margin:0">Sábado 7 de noviembre de 2026<br><span class="suave">Docente: Heyler Fabio Guaza</span></p></div>
   </div>
-  <div class="pie"><span>Repositorios: Santy01/PlanificadorTuristico.Api · Santy01/PlanificadorTuristico.Web</span><span>1 / 13</span></div>
+  <div class="pie"><span>Repositorios: Santy01/PlanificadorTuristico.Api · Santy01/PlanificadorTuristico.Web</span><span>1 / 15</span></div>
 </section>
 
 <!-- 2 · PROBLEMA Y USUARIO -->
 <section class="slide">
-  <span class="tiempo">1 min · Kleber Tepud</span>
   <p class="etq">Problema y usuario</p>
   <h2>Planificar la sierra central toma horas, y la información está dispersa y desactualizada</h2>
   <div class="grid g3">
@@ -101,12 +100,11 @@
   </div>
   <div class="cita" style="margin-top:24px">Regla de todo el proyecto: <b>el modelo propone, el código dispone.</b> La IA elige
     atractivos y redacta; el código valida contra el catálogo, calcula costos y horas, y decide lo que es exacto o riesgoso.</div>
-  <div class="pie"><span>HU-01 a HU-09 · docs/02-requisitos.md</span><span>2 / 13</span></div>
+  <div class="pie"><span>HU-01 a HU-09 · docs/02-requisitos.md</span><span>2 / 15</span></div>
 </section>
 
 <!-- 3 · DEMO EN VIVO -->
 <section class="slide">
-  <span class="tiempo">4 min · Kleber Tepud</span>
   <p class="etq">Demo en vivo · sobre la URL pública</p>
   <h2>https://planificador.bhsolutions.cloud</h2>
   <div class="grid" style="gap:16px">
@@ -123,12 +121,11 @@
   </div>
   <p class="suave" style="font-size:15px; margin-top:14px">Plan B si la plataforma falla: «la plataforma está despertando; mientras tanto, esta es la
     grabación de hoy» → video de 2 minutos y capturas en docs/evidencias/semana-4/.</p>
-  <div class="pie"><span>10 minutos antes: abrir /health para despertar la app y hacer una pregunta de prueba</span><span>3 / 13</span></div>
+  <div class="pie"><span>La demo usa la URL pública, no el computador local</span><span>3 / 15</span></div>
 </section>
 
 <!-- 4 · ARQUITECTURA -->
 <section class="slide">
-  <span class="tiempo">2 min · César Vasquez</span>
   <p class="etq">Arquitectura</p>
   <h2>Un flujo fijo para generar y un agente solo donde el camino no se puede escribir</h2>
   <div class="flujo">
@@ -155,12 +152,66 @@
       <li>El correo debe ser uno que escribió el visitante</li></ul></div>
   </div>
   <div class="leyenda"><span class="lc">decide el código</span><span class="li">decide la IA</span><span class="lp">decide la persona (confirmación)</span></div>
-  <div class="pie"><span>docs/03-arquitectura.md · docs/09-decisiones.md (ADR del agente) · docs/10-automatizacion.md</span><span>4 / 13</span></div>
+  <div class="pie"><span>docs/03-arquitectura.md · docs/09-decisiones.md (ADR del agente) · docs/10-automatizacion.md</span><span>4 / 15</span></div>
+</section>
+
+<!-- DESPLIEGUE -->
+<section class="slide">
+  <p class="etq">Despliegue · qué usamos</p>
+  <h2>Dos contenedores en un VPS, detrás de Traefik, publicados por un pipeline</h2>
+  <div class="grid g3">
+    <div class="tarjeta"><h3>Servidor y red</h3><ul>
+      <li><b>VPS propio</b> con Ubuntu y Docker (administrado también con Portainer)</li>
+      <li><b>Traefik</b> como proxy inverso: HTTPS con <b>Let's Encrypt</b> y redirección de HTTP a HTTPS</li>
+      <li>Un solo dominio: las rutas de la API van a la API; el resto, a la web</li></ul></div>
+    <div class="tarjeta"><h3>Contenedores (Docker)</h3><ul>
+      <li><b>API:</b> Python 3.12, FastAPI y uvicorn; torch solo CPU y el modelo de embeddings dentro de la imagen; usuario sin privilegios; HEALTHCHECK a /health</li>
+      <li><b>Web:</b> Node 24 compila Angular y <b>nginx</b> lo sirve (77 MB)</li>
+      <li><b>docker-compose</b> con etiquetas de Traefik</li></ul></div>
+    <div class="tarjeta"><h3>Datos</h3><ul>
+      <li>Dentro de la imagen: catálogo, configuración, prompts y modelo E5</li>
+      <li>Volúmenes del servidor: índice del RAG (Chroma) y registros</li>
+      <li>En memoria: acciones pendientes y límite por IP (se aceptan perder al reiniciar)</li></ul></div>
+  </div>
+  <h3 style="margin-top:20px">Pipeline de GitHub Actions (cada repositorio)</h3>
+  <div class="flujo" style="margin-top:8px">
+    <div class="caja c"><b>1 · Secretos</b>Gitleaks revisa todo el historial</div><div class="flecha">→</div>
+    <div class="caja c"><b>2 · Pruebas</b>pytest con cobertura ≥ 85 % · Vitest y compilación</div><div class="flecha">→</div>
+    <div class="caja c"><b>3 · Imagen</b>docker build para comprobar que compila</div><div class="flecha">→</div>
+    <div class="caja i"><b>4 · Despliegue</b>Solo desde master: SSH, build y docker compose up</div><div class="flecha">→</div>
+    <div class="caja c"><b>5 · Verificación</b>/health y pruebas funcionales contra la URL</div>
+  </div>
+  <p class="suave" style="font-size:15px; margin-top:12px">Si un paso falla, no se despliega. develop prueba; master publica (versiones etiquetadas: API v0.4.2, Web v1.1.0).</p>
+  <div class="pie"><span>Dockerfile · docker-compose.yml · .github/workflows/ci-cd.yml · docs/08-despliegue-docker.md · docs/adr/0003-plataforma-despliegue.md</span><span>5 / 15</span></div>
+</section>
+
+<!-- PROCESO DE QA -->
+<section class="slide">
+  <p class="etq">Calidad · proceso de QA y pruebas</p>
+  <h2>Ningún cambio llega a producción sin pasar por estas pruebas</h2>
+  <table class="compacta">
+    <tr><th>Nivel</th><th>Qué comprueba</th><th>Cuántas</th><th>Cuándo corre</th></tr>
+    <tr><td><b>Unitarias e integración</b></td><td>Reglas del código, agente (lista cerrada, tope, confirmación), errores del proveedor, límite por IP; con dobles del modelo, del RAG y del clima (sin red ni claves)</td><td>234 API · 37 web</td><td>Cada push (CI); cobertura ≥ 85 % o falla</td></tr>
+    <tr><td><b>Datos del catálogo</b></td><td>UTF-8 y comas, coordenadas en la zona centro, valores válidos, reducido = completo</td><td>18</td><td>Cada push (CI)</td></tr>
+    <tr><td><b>Contrato de despliegue</b></td><td>Lo que copia el Dockerfile se sube al VPS; Traefik envía a la API todas sus rutas</td><td>3</td><td>Cada push (CI)</td></tr>
+    <tr><td><b>Evaluación con el modelo real</b></td><td>Conjunto dorado con lo esperado escrito antes: 15 preguntas (4 sin respuesta), 15 solicitudes (4 adversarias), 10 casos del agente</td><td>40 casos</td><td>Al cambiar prompt, modelo o datos</td></tr>
+    <tr><td><b>Funcionales contra la URL</b></td><td>salud, caso, fuera de dominio, inyección, entrada inválida y confirmación, con el modelo real</td><td>8</td><td>Después de cada despliegue</td></tr>
+    <tr><td><b>Seguridad</b></td><td>Gitleaks sobre todo el historial; casos adversarios e inyección dentro de las pruebas</td><td>—</td><td>Cada push y pull request</td></tr>
+  </table>
+  <div class="flujo" style="margin-top:16px">
+    <div class="caja"><b>Rama feature</b>un cambio por tarea</div><div class="flecha">→</div>
+    <div class="caja c"><b>Pull request</b>CI: Gitleaks, pruebas, imagen</div><div class="flecha">→</div>
+    <div class="caja"><b>develop</b>integración</div><div class="flecha">→</div>
+    <div class="caja"><b>release/x.y.z</b>versión y PR a master</div><div class="flecha">→</div>
+    <div class="caja i"><b>master</b>despliegue + pruebas contra la URL</div>
+  </div>
+  <p class="suave" style="font-size:15px; margin-top:10px">Ante un defecto: primero una prueba que lo reproduce, después la corrección, y se comprueba que
+    la prueba falla si el defecto vuelve. Cada hallazgo queda en docs/evidencias/.</p>
+  <div class="pie"><span>tests/ · eval/ · tests/smoke.py · docs/11-plan-de-calidad.md · .github/workflows/ci-cd.yml</span><span>6 / 15</span></div>
 </section>
 
 <!-- 5 · EVIDENCIAS: PRUEBAS CONTRA LA URL -->
 <section class="slide">
-  <span class="tiempo">1 min · César Vasquez</span>
   <p class="etq">Evidencias · pruebas funcionales contra la URL pública</p>
   <h2>8 de 8 casos pasan contra la URL pública</h2>
   <div class="grid" style="grid-template-columns: 1.25fr 1fr; gap:26px">
@@ -182,12 +233,11 @@
       <img class="captura" src="../evidencias/semana-4/captura-03-pipeline-api-verde.png" alt="Pipeline en verde: secretos, pruebas, imagen y despliegue" style="height:200px; object-fit:cover; object-position:top left">
     </div>
   </div>
-  <div class="pie"><span>Los casos 4 y 5 tardan 0.1 s: los rechaza la regla de alcance sin llamar al modelo</span><span>5 / 13</span></div>
+  <div class="pie"><span>Los casos 4 y 5 tardan 0.1 s: los rechaza la regla de alcance sin llamar al modelo</span><span>7 / 15</span></div>
 </section>
 
 <!-- 6 · EVIDENCIAS: EVALUACIÓN FRENTE A LA SEMANA 3 -->
 <section class="slide">
-  <span class="tiempo">1 min · César Vasquez</span>
   <p class="etq">Evidencias · evaluación final frente a la semana 3</p>
   <h2>Lo esperado se escribió antes; medir encontró 4 fallas</h2>
   <table class="compacta">
@@ -204,35 +254,54 @@
     <div class="tarjeta mini"><div class="num">37 <small>pruebas web</small></div><p>Vitest: mapeos, errores y asistente</p></div>
     <div class="tarjeta mini"><div class="num">0 <small>atractivos inventados</small></div><p>En todas las evaluaciones (RNF-06)</p></div>
   </div>
-  <div class="pie"><span>eval/*.jsonl · eval/linea_base_*.json · docs/evidencias/semana-3/evaluacion-entrega3.md · docs/11-plan-de-calidad.md</span><span>6 / 13</span></div>
+  <div class="pie"><span>eval/*.jsonl · eval/linea_base_*.json · docs/evidencias/semana-3/evaluacion-entrega3.md · docs/11-plan-de-calidad.md</span><span>8 / 15</span></div>
 </section>
 
-<!-- 7 · SEGURIDAD -->
+<!-- SECRETOS -->
 <section class="slide">
-  <span class="tiempo">1 min · Kleber Suñiga</span>
-  <p class="etq">Seguridad</p>
-  <h2>Las claves viven solo en la plataforma; si el modelo falla, la app lo dice</h2>
+  <p class="etq">Protección de credenciales</p>
+  <h2>El código lee las claves; nunca las contiene</h2>
+  <table class="compacta">
+    <tr><th>Dónde</th><th>Cómo se ocultan</th></tr>
+    <tr><td><b>Repositorio</b></td><td><span class="entrada">.env</span> en <span class="entrada">.gitignore</span>; solo se versiona <span class="entrada">.env.example</span> con los nombres, sin valores. Las claves se leen de variables de entorno y, si falta una, la app se detiene con un mensaje claro</td></tr>
+    <tr><td><b>Imagen Docker</b></td><td><span class="entrada">.dockerignore</span> excluye <span class="entrada">.env</span> y <span class="entrada">.git</span>: la imagen no lleva secretos en ninguna capa</td></tr>
+    <tr><td><b>Servidor</b></td><td>El <span class="entrada">.env</span> real existe en un solo lugar del VPS, con permisos 600 (solo root); Docker lo inyecta al arrancar (<span class="entrada">env_file</span>)</td></tr>
+    <tr><td><b>Pipeline</b></td><td>GitHub Actions Secrets: llave SSH, servidor, usuario, huella del servidor y URL. Se leen como <span class="entrada">${{ secrets.NOMBRE }}</span> por variables de entorno; nunca están escritos en el workflow</td></tr>
+    <tr><td><b>Acceso al VPS</b></td><td>Una llave SSH distinta para cada repositorio, solo para desplegar; la huella del servidor se verifica (known_hosts) para no conectarse a uno falso</td></tr>
+    <tr><td><b>Lo que se muestra</b></td><td>/health dice si hay un modelo configurado, nunca la clave; los registros no guardan el texto del visitante y el correo va enmascarado</td></tr>
+  </table>
+  <div class="grid g3" style="margin-top:14px">
+    <div class="tarjeta mini"><div class="num">0 <small>hallazgos</small></div><p>Gitleaks sobre todo el historial, en local y en cada push (ambos repositorios)</p></div>
+    <div class="tarjeta mini"><div class="num">1 <small>falso positivo</small></div><p>Un valor de prueba con forma de clave: corregido antes de publicarlo</p></div>
+    <div class="tarjeta mini"><div class="num">1 <small>llave rotada</small></div><p>Una llave de despliegue quedó expuesta: se generó otra antes de usarla</p></div>
+  </div>
+  <div class="pie"><span>Regla: rotar, limpiar y prevenir · docs/08-despliegue-docker.md §3 · docs/evidencias/semana-4/ §1</span><span>9 / 15</span></div>
+</section>
+
+<!-- CUANDO EL MODELO FALLA -->
+<section class="slide">
+  <p class="etq">Integración IA estable</p>
+  <h2>Si el modelo falla, la app sigue viva y lo dice</h2>
   <div class="grid g2">
-    <div class="tarjeta"><h3>Dónde viven las claves</h3>
-      <ul><li>Groq y Gemini: solo en <b>/opt/planificador/.env</b> del VPS (chmod 600); nunca en git ni en la imagen</li>
-      <li>Despliegue: 5 secrets de GitHub Actions por repositorio, con una llave SSH distinta para cada uno</li>
-      <li><b>Gitleaks</b> sobre todo el historial en cada push: sin hallazgos. Un valor de prueba con forma de clave se detectó y se corrigió <b>antes</b> de publicarlo</li>
-      <li><span class="entrada">.env.example</span> solo con nombres</li></ul></div>
-    <div class="tarjeta"><h3>Cuando el modelo falla</h3>
+    <div class="tarjeta"><h3>Cuando el proveedor falla</h3>
       <ul><li><b>Tiempo límite</b> de 30 s en cada llamada</li>
       <li><b>Reintentos</b> con espera exponencial; respeta Retry-After</li>
-      <li><b>Respaldo:</b> Groq → Gemini, probado con Groq caído y a mitad de una conversación</li>
+      <li><b>Respaldo:</b> Groq → Gemini, probado con Groq caído y a mitad de una conversación del agente</li>
       <li><b>Mensaje claro</b> (503), nunca la traza del error</li>
-      <li><b>Límite por IP:</b> 10 itinerarios y 20 mensajes por minuto → 429 con cuenta regresiva</li></ul></div>
+      <li>/health responde sin llamar al modelo</li></ul></div>
+    <div class="tarjeta"><h3>Para que no se agote ni se abuse</h3>
+      <ul><li><b>Límite por IP:</b> 10 itinerarios y 20 mensajes por minuto → 429 con cuenta regresiva en la web</li>
+      <li><b>Topes de entrada:</b> texto, días e historial; tokens de salida acotados</li>
+      <li><b>Regla de alcance</b> antes del modelo: rechaza sin gastar tokens</li>
+      <li><b>Arranque en frío:</b> el RAG se precarga al iniciar</li></ul></div>
   </div>
   <div class="cita" style="margin-top:18px">OWASP 2026: inyección (LLM01/ASI01) → regla de alcance y datos delimitados · agencia excesiva
     (LLM06/ASI02) → lista cerrada y confirmación · desinformación (LLM09) → citas validadas y verificación de datos.</div>
-  <div class="pie"><span>docs/riesgos.md (9 riesgos, 5 ya ocurrieron en pruebas) · docs/adr/0003-plataforma-despliegue.md</span><span>7 / 13</span></div>
+  <div class="pie"><span>src/services/llm.py · src/limites.py · docs/riesgos.md (9 riesgos, 5 ya ocurrieron en pruebas)</span><span>10 / 15</span></div>
 </section>
 
 <!-- 8 · LIMITACIONES -->
 <section class="slide">
-  <span class="tiempo">2 min · Kleber Suñiga</span>
   <p class="etq">Limitaciones · dichas con honestidad</p>
   <h2>Lo que todavía no hace, o hace a medias</h2>
   <div class="grid g2" style="gap:14px 22px">
@@ -249,7 +318,7 @@
     <div class="tarjeta"><h3>Operación</h3><p>Un solo servidor y un proceso: las acciones pendientes y el límite por IP viven
       en memoria. Gemini puede tardar 11–66 s cuando está saturado.</p></div>
   </div>
-  <div class="pie"><span>README.md «Lo que NO hace todavía» · docs/11-plan-de-calidad.md §4</span><span>8 / 13</span></div>
+  <div class="pie"><span>README.md «Lo que NO hace todavía» · docs/11-plan-de-calidad.md §4</span><span>11 / 15</span></div>
 </section>
 
 <!-- 9 · LOS SEIS ENTREGABLES -->
@@ -270,7 +339,7 @@
     <p style="font-size:22px; margin:0"><b>Gracias.</b><br><span class="suave">Preguntas del tribunal: cualquiera de los tres responde
       por cualquier parte.</span></p>
   </div>
-  <div class="pie"><span>Grupo 4 · Kleber Tepud · César Vasquez · Kleber Suñiga</span><span>9 / 13</span></div>
+  <div class="pie"><span>Grupo 4 · Kleber Tepud · César Vasquez · Kleber Suñiga</span><span>12 / 15</span></div>
 </section>
 
 <!-- 10 · RESPALDO: POR QUÉ ASÍ -->
@@ -288,7 +357,7 @@
     <tr><td><b>Mismo dominio</b> para web y API</td><td>Subdominio + CORS</td><td>Sin CORS y la API ve la IP real del visitante para el límite</td></tr>
     <tr><td><b>Confirmación</b> solo para enviar</td><td>Confirmar también recalcular</td><td>Recalcular no sale del sistema y se ve en pantalla; enviar no se puede deshacer</td></tr>
   </table>
-  <div class="pie"><span>docs/09-decisiones.md · docs/adr/0003-plataforma-despliegue.md · docs/07-rag.md</span><span>10 / 13</span></div>
+  <div class="pie"><span>docs/09-decisiones.md · docs/adr/0003-plataforma-despliegue.md · docs/07-rag.md</span><span>13 / 15</span></div>
 </section>
 
 <!-- 11 · RESPALDO: HALLAZGOS -->
@@ -310,7 +379,7 @@
     <div class="tarjeta"><h3>4 de 4 adversarias aceptadas</h3><p>El prompt pedía rechazarlas y el modelo no lo hacía.
       → Regla de alcance en código, con pruebas de falsos positivos.</p></div>
   </div>
-  <div class="pie"><span>docs/evidencias/semana-3/evaluacion-entrega3.md · docs/evidencias/semana-4/README.md</span><span>11 / 13</span></div>
+  <div class="pie"><span>docs/evidencias/semana-3/evaluacion-entrega3.md · docs/evidencias/semana-4/README.md</span><span>14 / 15</span></div>
 </section>
 
 <!-- 12 · RESPALDO: USO DE IA -->
@@ -335,34 +404,9 @@
   </div>
   <div class="cita" style="margin-top:22px">Criterio: nada generado se acepta sin una prueba que lo respalde; cuando una prueba
     falla, se corrige el código, no la prueba (salvo que la prueba estuviera mal, y entonces se documenta).</div>
-  <div class="pie"><span>Historial de commits y pull requests en ambos repositorios</span><span>12 / 13</span></div>
+  <div class="pie"><span>Historial de commits y pull requests en ambos repositorios</span><span>15 / 15</span></div>
 </section>
 
-<!-- 13 · RESPALDO: REPARTO Y GUION DE TIEMPOS -->
-<section class="slide respaldo">
-  <span class="tag-respaldo">GUÍA INTERNA DEL GRUPO · reparto de tramos (propuesto)</span>
-  <p class="etq" style="margin-top:18px">12 minutos exactos</p>
-  <h2>Quién presenta qué</h2>
-  <table>
-    <tr><th>Minuto</th><th>Tramo</th><th>Presenta</th><th>Diapositiva</th></tr>
-    <tr><td>0 – 1</td><td>Problema y usuario</td><td>Kleber Tepud</td><td>2</td></tr>
-    <tr><td>1 – 5</td><td>Demo en vivo: cita · abstención · confirmación (+ Quitar)</td><td>Kleber Tepud</td><td>3</td></tr>
-    <tr><td>5 – 7</td><td>Arquitectura y agente</td><td>César Vasquez</td><td>4</td></tr>
-    <tr><td>7 – 9</td><td>Evidencias: pruebas contra la URL y evaluación</td><td>César Vasquez</td><td>5 y 6</td></tr>
-    <tr><td>9 – 10</td><td>Seguridad</td><td>Kleber Suñiga</td><td>7</td></tr>
-    <tr><td>10 – 12</td><td>Limitaciones y cierre</td><td>Kleber Suñiga</td><td>8 y 9</td></tr>
-  </table>
-  <div class="grid g2" style="margin-top:18px">
-    <div class="tarjeta"><h3>Antes de entrar</h3><ul>
-      <li>Ensayar con reloj y grabar el video de 2 minutos (plan B)</li>
-      <li>−30 min: abiertos la URL, el repositorio, este PDF y el video</li>
-      <li>−10 min: abrir /health y hacer una pregunta de prueba</li></ul></div>
-    <div class="tarjeta"><h3>No hacer</h3><ul>
-      <li>No mostrar el .env, claves ni la consola del VPS al compartir pantalla</li>
-      <li>No correr evaluaciones el día de la sustentación: gastan la cuota de la demo</li></ul></div>
-  </div>
-  <div class="pie"><span>Observaciones del tribunal → docs/evidencias/semana-4/ · versión final: lunes 9, 23h59</span><span>13 / 13</span></div>
-</section>
 
 </body>
 </html>

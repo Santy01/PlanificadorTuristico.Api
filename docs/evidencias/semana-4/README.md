@@ -155,8 +155,8 @@ un mensaje claro, que es el comportamiento esperado.
 
 ## 6. Sustentación (sábado 7 de noviembre)
 
-- **Presentación:** [docs/sustentacion-grupo4.pdf](../../sustentacion-grupo4.pdf) (13 diapositivas: 9 para los 12 minutos y 4
-  de respaldo para las preguntas). Fuente editable: `docs/presentacion/sustentacion-grupo4.html`.
+- **Presentación:** [docs/sustentacion-grupo4.pdf](../../sustentacion-grupo4.pdf) (15 diapositivas: 12 para los 12 minutos, incluidos el
+  despliegue, el proceso de QA y la protección de credenciales, y 3 de respaldo para las preguntas). Fuente editable: `docs/presentacion/sustentacion-grupo4.html`.
 - **Capturas pedidas para la sustentación:**
   - `/health` en la URL pública: [captura-01-health-produccion.png](captura-01-health-produccion.png)
   - La aplicación en producción: [captura-02-app-produccion.png](captura-02-app-produccion.png)
