@@ -23,7 +23,7 @@ correrlo.
 | | Confirmación correcta (escenario D) | 100 % | 2/2 | ídem |
 | | Vueltas frente al tope (escenario C) | máximo < 6 | media 1.6, máximo 3 | ídem; el tope se prueba en `tests/test_agente.py` |
 | | Respuestas con datos sin respaldo | 0 | 0 | campo `advertencias` |
-| **Software** | Pruebas unitarias y de integración | 100 % pasan | 198 pasan | `pytest -q` (en CI) |
+| **Software** | Pruebas unitarias y de integración | 100 % pasan | 234 pasan | `pytest -q` (en CI) |
 | | Cobertura de `src/` (RNF-14 pide ≥ 70 % en lógica) | ≥ 85 % (falla el build) | 95 % | `pytest --cov=src` (en CI) |
 | | Secretos en el repositorio (RNF-12) | 0 | 0 | Gitleaks en CI, con el historial completo |
 | | La imagen Docker se construye | sí | sí | job `imagen` en CI |

@@ -85,12 +85,14 @@ Resultado con Gemini real como proveedor:
 Gemini tarda unos 11–13 s por itinerario (Groq, ~1 s): sirve como respaldo dentro del p95 de 20 s de RNF-01. En el
 streaming la respuesta final todavía no indica qué proveedor respondió.
 
-**Pruebas:** 214 pasan, con 95 % de cobertura.
+**Pruebas:** 234 pasan, con 95 % de cobertura.
 
 ## 4. Pruebas funcionales (misión 6)
 
-`tests/smoke.py` llama a la API como el frontend, con el modelo real y sin claves en el cliente. Tiene 8 casos de los
-5 tipos del taller, más la confirmación humana: la acción pendiente se rechaza al final, así que nunca se envía nada.
+`tests/smoke.py` llama a la API como el frontend, con el modelo real y sin claves en el cliente. La primera versión
+tenía 8 casos de los 5 tipos del taller, más la confirmación humana (la acción pendiente se rechaza al final, así que
+nunca se envía nada); hoy tiene 23 (ver [docs/08-pruebas.md](../../08-pruebas.md)). Las corridas de esta sección son
+las de las 8 primeras pruebas.
 Corre a mano y, desde la 0.4.0, en el pipeline después de cada despliegue.
 
 Primera corrida, contra la API local (Groq como principal, Gemini como respaldo):
@@ -109,8 +111,11 @@ PASA  8. [confirmacion] POST /agente -> 200 en 8.0 s
 RESULTADO: 8/8 pasan · p95 8.0 s · más lento 8.0 s
 ```
 
-Los casos 4 y 5 tardan 0.0 s porque los rechaza la regla de alcance sin llamar al modelo. **Pendiente:** correrlo
-contra producción después de liberar la 0.4.0.
+Los casos 4 y 5 tardan 0.0 s porque los rechaza la regla de alcance sin llamar al modelo. Contra producción se corrió
+al liberar la 0.4.0 (§5: 7/8 la primera vez y 8/8 repetida) y en cada despliegue del pipeline (§6). Después de la
+observación del docente de que 8 casos y una sola inyección eran pocos, la suite creció a **23 casos** (más
+inyecciones, el agente fuera de alcance, la confirmación de un solo uso y el 429); su resultado contra producción está en
+[docs/08-pruebas.md](../../08-pruebas.md).
 
 ## 5. Liberación 0.4.0 en producción
 
@@ -152,3 +157,33 @@ de Groq: «Sí, para el día 1 se pronostican chubascos con lluvia intensa (88 %
 **Lección:** el respaldo protege contra la caída de Groq, pero el plan gratuito de Gemini también se satura (503 por
 alta demanda, latencias de hasta 66 s en las pruebas). Con los dos planes gratuitos agotados, la API responde 503 con
 un mensaje claro, que es el comportamiento esperado.
+
+## 6. Sustentación (sábado 7 de noviembre)
+
+- **Presentación:** [docs/sustentacion-grupo4.pdf](../../sustentacion-grupo4.pdf) (15 diapositivas: 12 para los 12 minutos, incluidos el
+  despliegue, el proceso de QA y la protección de credenciales, y 3 de respaldo para las preguntas). Fuente editable: `docs/presentacion/sustentacion-grupo4.html`.
+- **Capturas pedidas para la sustentación:**
+  - `/health` en la URL pública: [captura-01-health-produccion.png](captura-01-health-produccion.png)
+  - La aplicación en producción: [captura-02-app-produccion.png](captura-02-app-produccion.png)
+  - Pipeline en verde (secretos, pruebas, imagen y despliegue de la v0.4.2): [captura-03-pipeline-api-verde.png](captura-03-pipeline-api-verde.png)
+- **Pruebas contra la URL** (pipeline del despliegue v0.4.2):
+
+```
+PASA  1. [salud] GET /health -> 200 en 0.2 s
+PASA  2. [caso] POST /itinerario -> 200 en 1.5 s
+PASA  3. [caso] POST /itinerario -> 200 en 14.3 s
+PASA  4. [fuera] POST /itinerario -> 200 en 0.1 s
+PASA  5. [inyeccion] POST /itinerario -> 200 en 0.1 s
+PASA  6. [invalida] POST /itinerario -> 422 en 0.1 s
+PASA  7. [caso] POST /agente -> 200 en 1.3 s
+PASA  8. [confirmacion] POST /agente -> 200 en 0.5 s
+RESULTADO: 8/8 pasan · p95 14.3 s · más lento 14.3 s
+```
+
+- **Observaciones del tribunal:** al 12 de noviembre de 2026 el tribunal **todavía no entrega observaciones**, así que no
+  hay nada que corregir ni descartar. Cuando lleguen se registran en esta tabla, una fila por observación, con qué se
+  hizo (corregida con el commit, en curso o descartada con la razón):
+
+| Observación del tribunal | Qué se hizo | Estado |
+|---|---|---|
+| *(sin observaciones recibidas)* | | |

@@ -24,7 +24,7 @@ Internet ──443──► Traefik ──red traefik_proxy──► contenedor 
 
 | Archivo | Para qué sirve |
 |---|---|
-| `Dockerfile` | Imagen de la API: Python 3.12, torch solo CPU, modelo de embeddings incluido, usuario sin privilegios, puerto por la variable `PORT` (8000 por defecto). |
+| `Dockerfile` | Imagen de la API: base `python:3.12-slim` fijada por digest, torch solo CPU con versión exacta, modelo de embeddings incluido, usuario sin privilegios, puerto por la variable `PORT` (8000 por defecto). Las dependencias van con `==` en `requirements.txt` ([ADR 6](09-decisiones.md)). |
 | `.dockerignore` | Deja fuera de la imagen el `.env`, `.git`, `.venv`, `tests/`, `docs/`, los logs y el índice. |
 | `docker-compose.yml` | Define el servicio, los volúmenes, la red `traefik_proxy` y los *labels* de Traefik. |
 | `.github/workflows/ci-cd.yml` | Pipeline: revisión de secretos, pruebas, construcción de la imagen y despliegue. |
@@ -125,7 +125,8 @@ docker compose ps        # el estado debe llegar a "healthy"
 curl https://planificador.bhsolutions.cloud/health
 ```
 
-Respuesta esperada: `{"status":"ok"}`.
+Respuesta esperada: `status: ok`, la versión (`0.5.0`), el índice (`"rag":{"activo":true,"fragmentos":251}`) y los dos
+proveedores configurados (Groq y Gemini), sin ninguna clave.
 
 ## 6. Pipeline CI/CD (`.github/workflows/ci-cd.yml`)
 
@@ -139,11 +140,12 @@ pruebas ──┼─► imagen ─► despliegue (solo push a master o ejecució
 | Job | Qué hace |
 |---|---|
 | `secretos` | Gitleaks revisa el historial completo en busca de claves. |
-| `pruebas` | `pytest` (104 pruebas). Omite `sentence-transformers`: las pruebas no cargan el modelo. |
+| `pruebas` | `pytest` (234 pruebas). Omite `sentence-transformers`: las pruebas no cargan el modelo. |
 | `imagen` | Construye el Dockerfile para comprobar que compila (sin publicarlo). |
-| `despliegue` | Sube el código por SSH, construye la imagen en el VPS, hace `docker compose up -d` y comprueba `/health`. Necesita `secretos`, `pruebas` e `imagen` en verde. |
+| `despliegue` | Sube el código por SSH, construye la imagen en el VPS, hace `docker compose up -d`, comprueba `/health` y corre `tests/smoke.py` contra la URL ([08-pruebas.md](08-pruebas.md)). Necesita `secretos`, `pruebas` e `imagen` en verde. |
 
-El despliegue **no toca** el `.env` ni `data/vectorstore`: viven en el servidor.
+El despliegue **no toca** el `.env` ni `data/vectorstore`: viven en el servidor. Al cambiar el catálogo o el corpus,
+el índice se actualiza a mano (ver «Actualizar el índice del RAG» en §7).
 
 ### Secrets de GitHub
 
@@ -183,8 +185,48 @@ docker compose logs -f
 docker logs traefik 2>&1 | grep -i -E "planificador|acme|error" | tail -20
 ```
 
-**Actualizar el índice del RAG:** reconstruirlo en el equipo (`python scripts/ingestar_rag.py`) y subir `data\vectorstore`
-con `pscp`; luego `docker compose restart`.
+### Actualizar el índice del RAG (a mano)
+
+**Cuándo:** cada vez que cambia el catálogo (`data/catalogo/`) o el corpus (`data/corpus/manifiesto.csv`, `data/raw/`).
+El despliegue por CD **no** lo actualiza: `data/vectorstore` no está en git ni en la imagen (el corpus original no se
+versiona). Fusionar una versión nueva en `master` sin hacer estos pasos deja a producción con el índice anterior; `/health`
+lo delata porque informa `rag.fragmentos` (riesgo **R9** de [riesgos.md](riesgos.md)). La versión 0.5.0 trae el catálogo
+verificado de 60 atractivos y un índice de **251 fragmentos** (la 0.4.2 tenía 241).
+
+1. **En el equipo**, con el catálogo y el corpus definitivos (reconstruye la colección completa: no duplica):
+
+```powershell
+python scripts/construir_corpus.py      # solo si cambió el corpus (descarga las páginas fuente)
+python scripts/ingestar_rag.py          # imprime cuántos fragmentos indexó: deben ser 251
+```
+
+2. **En el servidor**, apartar el índice anterior [PuTTY]:
+
+```bash
+cd /opt/planificador && mv data/vectorstore data/vectorstore.anterior
+```
+
+3. **Subir el nuevo** [PowerShell], desde la carpeta del proyecto:
+
+```powershell
+pscp -r data\vectorstore root@IP_VPS:/opt/planificador/data/
+```
+
+4. **Permisos y reinicio** [PuTTY] (el contenedor corre con el usuario `app`, uid 1000):
+
+```bash
+chown -R 1000:1000 /opt/planificador/data/vectorstore && cd /opt/planificador && docker compose restart
+```
+
+5. **Comprobar** que producción muestra la versión y el índice esperados:
+
+```bash
+curl -s https://planificador.bhsolutions.cloud/health
+```
+
+   Debe responder `"version":"0.5.0"` y `"rag":{"activo":true,"fragmentos":251}`. Si `fragmentos` no coincide o `activo`
+   es `false`, devolver el anterior (`rm -rf data/vectorstore && mv data/vectorstore.anterior data/vectorstore`) y
+   reiniciar. Cuando está bien: `rm -rf /opt/planificador/data/vectorstore.anterior`.
 
 ## 8. Problemas encontrados
 
