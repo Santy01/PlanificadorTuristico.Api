@@ -208,11 +208,11 @@ python eval/evaluar.py agente --url https://planificador.bhsolutions.cloud --pau
 Grupo 4. Detalle de los aportes de cada integrante, con la evidencia en el historial de git, en
 [docs/12-declaracion-uso-ia.md](docs/12-declaracion-uso-ia.md).
 
-| Integrante (GitHub) | Responsabilidad principal |
+| Integrante (usuario de GitHub) | Responsabilidad principal |
 |---|---|
-| Santy01 | Base del proyecto, API FastAPI y esquemas, servicio de índice y recuperación del RAG, evaluación, límite por IP y `/health`, pruebas funcionales y presentación |
-| kleber212023 | Cliente del modelo y prompts, servicio del itinerario, corpus e ingesta del RAG, agente de alcance controlado, regla de alcance, Docker, Traefik y pipeline CI/CD, documentación de despliegue |
-| CesarVasquez1985 | Catálogo y servicio de clima, suite de pruebas, herramientas del agente, Gemini como respaldo, catálogo verificado con importación segura, documentación y presentación |
+| Klebe Tepud (`Santy01`) | Base del proyecto, API FastAPI y esquemas, servicio de índice y recuperación del RAG, evaluación, límite por IP y `/health`, pruebas funcionales y presentación |
+| Kleber Zuñiga (`kleber212023`) | Cliente del modelo y prompts, servicio del itinerario, corpus e ingesta del RAG, agente de alcance controlado, regla de alcance, Docker, Traefik y pipeline CI/CD, documentación de despliegue |
+| César Vasquez (`CesarVasquez1985`) | Catálogo y servicio de clima, suite de pruebas, herramientas del agente, Gemini como respaldo, catálogo verificado con importación segura, documentación y presentación |
 
 ## Aviso sobre IA y datos
 
