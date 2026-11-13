@@ -145,6 +145,9 @@ frontend (prioridad 1). La API no publica puertos: Traefik llega a ella por la r
 
 **Consecuencias.** Si se agrega un endpoint hay que sumarlo a la regla de Traefik; `tests/test_despliegue.py` lo comprueba
 y evita que quede sin ruta. Los dos despliegues son independientes: cada repositorio tiene su pipeline.
+Mientras la API arranca, Traefik no la enruta (excluye contenedores que aún no están `healthy`) y el frontend
+responde 200 a cualquier GET, incluso `/health`: el pipeline por eso exige el JSON de la API antes de correr el smoke
+(falla observada en el release 0.5.0, [08-despliegue-docker.md](08-despliegue-docker.md) §8).
 
 ## ADR 5 · Catálogo verificado e importación segura desde Excel
 
