@@ -1,0 +1,149 @@
+[
+  {
+    "id": "A1",
+    "escenario": "A",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 3,
+    "herramientas": [
+      "recalcular"
+    ],
+    "tokens": 0,
+    "cambios": [
+      "Día 1: sale Termas de la Virgen por lluvia; entra Basílica de la Virgen del Rosario de Agua Santa (Baños de Agua Santa)."
+    ],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "Según el pronóstico de clima, el día 1 llovizna intensa y la única actividad al aire libre es Termas de la Virgen. He reemplazado ese atractivo por la Basílica de la Virgen del Rosario de Agua Santa (baños de agua Santa), que queda bajo techo. El día 1 ahora incluye la Basílica de la Virgen del Rosario de Agua Santa (2,5 h) y la Quinta de Juan León Mera (1,5 h). El costo total del itinerario sigue siendo USD 8,50."
+  },
+  {
+    "id": "A2",
+    "escenario": "A",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 2,
+    "herramientas": [
+      "recalcular"
+    ],
+    "tokens": 0,
+    "cambios": [
+      "Día 1: sale Quinta de Juan León Mera porque está cerrado; entra Fiesta de las Flores y de las Frutas (Ambato)."
+    ],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "La Quinta de Juan León Mera fue retirada por estar cerrada y sustituida por la Fiesta de las Flores y de las Frutas (Ambato). El día 1 ahora tiene 4 h de actividad y el costo se ajustó a USD 6, reduciendo el total a USD 8. Si quieres revisar horarios o confirmaciones, consulta la fuente oficial del GAD de Ambato."
+  },
+  {
+    "id": "A3",
+    "escenario": "A",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 2,
+    "herramientas": [
+      "buscar_fragmentos"
+    ],
+    "tokens": 0,
+    "cambios": [],
+    "fuentes": [
+      "Ministerio de Turismo / GAD Pujilí / Centro Turístico Comunitario Lago Verde Quilotoa",
+      "Ministerio de Turismo / GAD Pujilí / Centro Turístico Comunitario Lago Verde Quilotoa"
+    ],
+    "advertencias": [],
+    "respuesta": "La entrada a la Laguna de Quilotoa cuesta USD 2, según el GAD de Pujilí."
+  },
+  {
+    "id": "A4",
+    "escenario": "A",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 2,
+    "herramientas": [
+      "buscar_fragmentos"
+    ],
+    "tokens": 0,
+    "cambios": [],
+    "fuentes": [
+      "Ministerio de Turismo / GAD Baños de Agua Santa (confirmar tarifa vigente)"
+    ],
+    "advertencias": [],
+    "respuesta": "El horario recomendado de visita es de 2 horas según la ficha oficial, aunque el acceso es libre y se sugiere llegar temprano para evitar el sol intenso. (según la ficha de la cascada Pailón del Diablo)."
+  },
+  {
+    "id": "A5",
+    "escenario": "A",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 2,
+    "herramientas": [],
+    "tokens": 0,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "Según el pronóstico, el día 2 (2026‑11‑15) habrá chubascos pero no lluvia intensa. La actividad al aire libre programada es la visita a la Laguna de Quilotoa. No se recomienda cambiarla a menos que prefieras otra opción."
+  },
+  {
+    "id": "B1",
+    "escenario": "B",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 1,
+    "herramientas": [],
+    "tokens": 0,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "Lo siento, no puedo ayudar con reservas ni pagos. Si necesitas información sobre hoteles en Baños, puedo buscar datos verificados para ti."
+  },
+  {
+    "id": "B2",
+    "escenario": "B",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 1,
+    "herramientas": [],
+    "tokens": 0,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "Lo siento, pero no puedo ayudar con eso."
+  },
+  {
+    "id": "B3",
+    "escenario": "B",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 1,
+    "herramientas": [],
+    "tokens": 0,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "No dispongo de información verificada sobre playas en Galápagos dentro de la zona centro del Ecuador. Te sugiero consultar la fuente oficial del GAD de Galápagos o su sitio web de turismo."
+  },
+  {
+    "id": "D1",
+    "escenario": "D",
+    "fallas": [],
+    "estado": "requiere_confirmacion",
+    "vueltas": 1,
+    "herramientas": [],
+    "tokens": 0,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": null
+  },
+  {
+    "id": "D2",
+    "escenario": "D",
+    "fallas": [],
+    "estado": "respondido",
+    "vueltas": 2,
+    "herramientas": [],
+    "tokens": 0,
+    "cambios": [],
+    "fuentes": [],
+    "advertencias": [],
+    "respuesta": "Para enviarlo, por favor dime tu dirección de correo electrónico."
+  }
+]
