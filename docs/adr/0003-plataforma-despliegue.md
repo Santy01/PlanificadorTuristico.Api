@@ -30,7 +30,7 @@
 
 | Dato | La app lo… | Dónde vive en producción |
 |---|---|---|
-| Índice del RAG (`data/vectorstore`, 241 fragmentos) | lee | Volumen del servidor (`./data/vectorstore`), subido a mano desde el equipo que lo construye. No va en la imagen porque el corpus original (`data/raw`) no se versiona |
+| Índice del RAG (`data/vectorstore`, 251 fragmentos, catálogo verificado del 7 nov 2026) | lee | Volumen del servidor (`./data/vectorstore`), subido a mano desde el equipo que lo construye. No va en la imagen porque el corpus original (`data/raw`) no se versiona |
 | Catálogo y manifiesto del corpus | lee | Dentro de la imagen |
 | Configuración (`config/`, prompts) | lee | Dentro de la imagen |
 | Modelo de embeddings | lee | Dentro de la imagen (se descarga al construir; `HF_HUB_OFFLINE=1` al arrancar) |
@@ -38,6 +38,11 @@
 | Acciones pendientes del agente | escribe | En memoria; **se pierden al reiniciar y lo aceptamos**: vencen a los 15 minutos de todos modos y el visitante puede volver a pedir el envío |
 | Contadores del límite por IP | escribe | En memoria; se pierden al reiniciar (aceptado: es una ventana de 60 s) |
 | Logs (`llm.jsonl`, `agente.jsonl`) y bandeja de salida simulada | escribe | Volumen del servidor (`./logs`); sin texto del visitante y con el correo enmascarado |
+
+**El despliegue no actualiza el índice.** El pipeline sube el código, `config/` y el catálogo, pero no
+`data/vectorstore`: no está en git. Si cambia el catálogo o el corpus hay que reconstruir el índice en el equipo y
+subirlo a mano; sin hacerlo, producción queda con el índice anterior y `/health` lo delata (`rag.fragmentos`). El
+procedimiento está en [../08-despliegue-docker.md](../08-despliegue-docker.md), sección «Actualizar el índice del RAG».
 
 ## Alternativas descartadas
 
