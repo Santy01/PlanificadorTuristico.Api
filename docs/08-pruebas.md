@@ -57,6 +57,12 @@ cuota por minuto del proveedor (un itinerario gasta ~6 000 de los 8 000 tokens d
 propósito con solicitudes inválidas (no llaman al modelo) y espera a que se libere para no dejar bloqueada la IP. Una
 corrida completa tarda unos minutos, casi todo en pausas.
 
+**Si el proveedor tropieza.** Los planes gratuitos fallan a veces, y la API lo dice con un **503 y un mensaje claro** (es
+el comportamiento esperado, no un error). Los casos que llegan al modelo (2, 3, 10, 15, 16, 20 y 21) se **reintentan una
+vez tras 30 s** si reciben ese 503; el reintento siempre se muestra en la salida y, si vuelve a fallar, el caso queda
+como FALLA. Además, el agente usa el itinerario del caso 2 o, si ese falló, el del caso 3: así un tropiezo del
+proveedor en un caso no omite en cascada los 8 casos del agente (así quedó el despliegue del 12 de noviembre: 14 de 23).
+
 ## Qué queda fuera, y dónde se cubre
 
 | Lo que no se prueba aquí | Dónde está cubierto |
