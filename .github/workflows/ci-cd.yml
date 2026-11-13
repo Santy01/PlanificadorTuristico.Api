@@ -94,13 +94,19 @@ jobs:
           ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
             "cd /opt/planificador && docker build -t planificador-api:latest . && docker compose up -d && docker image prune -f"
 
+      # El frontend comparte el dominio y responde 200 a cualquier GET (también a /health) mientras la API arranca:
+      # Traefik no la enruta hasta que su healthcheck pasa (unos 60 s por el modelo de embeddings). Por eso no basta con
+      # que curl reciba 200: hay que ver el JSON de la API. (El release 0.5.0 falló así: el smoke recibió 405 de nginx.)
       - name: Verificar que la API responde
+        env:
+          SALUD: ${{ secrets.APP_HEALTH_URL }}
         run: |
-          for _ in $(seq 1 12); do
-            if curl -fsS "${{ secrets.APP_HEALTH_URL }}"; then echo; exit 0; fi
+          for _ in $(seq 1 24); do
+            RESPUESTA=$(curl -fsS "$SALUD" || true)
+            if echo "$RESPUESTA" | grep -q '"status":"ok"'; then echo "$RESPUESTA"; exit 0; fi
             sleep 10
           done
-          echo "La API no respondió después del despliegue"
+          echo "La API no respondió con su JSON después del despliegue (puede estar contestando el frontend)"
           exit 1
 
       # Pruebas de humo contra producción con el modelo real (tests/smoke.py: salud, itinerario, agente, fuera de

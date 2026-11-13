@@ -236,6 +236,7 @@ curl -s https://planificador.bhsolutions.cloud/health
 | `pscp: src: No such file or directory` | El comando se ejecutó fuera de la carpeta del proyecto | Hacer `cd /d` a la carpeta del proyecto antes. |
 | La API arranca lenta o intenta bajar el modelo | El modelo de embeddings se descargaba en cada arranque | Se descarga al construir la imagen y `HF_HUB_OFFLINE=1` evita consultar Hugging Face. |
 | Sin certificado HTTPS | El dominio no apunta al VPS, o el puerto 80 está cerrado | Revisar `nslookup` y los logs de Traefik. |
+| El smoke del pipeline falla con **405 de nginx** justo después de desplegar, aunque «Verificar que la API responde» pasó (release 0.5.0, 12 nov) | Al reiniciar el contenedor, Traefik no enruta la API hasta que su healthcheck pasa (~60 s por el modelo de embeddings) y el frontend, que comparte el dominio, responde 200 a cualquier GET, también a `/health` (`<!doctype html>`). El chequeo daba por buena la respuesta del frontend | El paso ahora exige el **JSON de la API** (`"status":"ok"`) y espera hasta 4 minutos antes de correr el smoke. |
 
 ## 9. Recomendaciones de seguridad
 
