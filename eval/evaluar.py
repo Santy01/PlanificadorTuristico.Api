@@ -4,6 +4,13 @@
     python eval/evaluar.py solicitudes [--pausa 30]  # con Groq: 15 solicitudes de itinerario
     python eval/evaluar.py agente [--pausa 40]       # con Groq: escenarios A, B y D del agente
 
+    python eval/evaluar.py solicitudes --url https://planificador.bhsolutions.cloud   # contra la app DESPLEGADA
+    python eval/evaluar.py agente --url https://planificador.bhsolutions.cloud
+
+Con `--url` los mismos casos y las mismas revisiones se corren por HTTP contra producción, sin claves en el cliente. Por
+HTTP no se ven las herramientas que usó el agente: `recalcular` se deduce de `cambios` y `buscar_fragmentos` de
+`fuentes`; `consultar_clima` no se puede comprobar y esa condición del caso A5 se omite (se avisa en la salida).
+
 Cada modo imprime una línea por caso con lo que NO se cumplió y guarda el detalle en eval/resultados_<modo>.json.
 `rag` termina con código 1 si el acierto baja de 0.7 o el silencio de 0.9 (se puede usar como compuerta).
 El escenario C (tope de vueltas) no se puede forzar con el modelo real: lo cubre tests/test_agente.py.
@@ -15,6 +22,8 @@ import argparse
 import json
 import sys
 import time
+import urllib.error
+import urllib.request
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -35,6 +44,33 @@ SALIDA = {"solicitudes": "resultados_solicitudes.json", "agente": "resultados_ag
 
 def leer(nombre: str) -> list[dict]:
     return [json.loads(x) for x in (RAIZ / "eval" / nombre).read_text(encoding="utf-8").splitlines() if x.strip()]
+
+
+class ErrorHTTP(Exception):
+    """La API desplegada respondió con un estado que no es 200 (p. ej. 503 si fallan los dos proveedores)."""
+
+    def __init__(self, estado: int, detalle: str):
+        super().__init__(f"HTTP {estado}: {detalle}")
+        self.estado = estado
+
+
+def por_http(url: str, ruta: str, cuerpo: dict, modelo):
+    """POST a la app desplegada y la respuesta validada con el mismo esquema Pydantic que usa la API. Ante un 429
+    (límite por IP) espera lo que indica Retry-After y reintenta una vez."""
+    for intento in (1, 2):
+        req = urllib.request.Request(url.rstrip("/") + ruta, data=json.dumps(cuerpo).encode("utf-8"), method="POST",
+                                     headers={"Content-Type": "application/json", "User-Agent": "evaluar-planificador/1.0"})
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                return modelo(**json.loads(r.read().decode("utf-8")))
+        except urllib.error.HTTPError as e:
+            texto = e.read().decode("utf-8", "replace")
+            if e.code == 429 and intento == 1:
+                espera = int({k.lower(): v for k, v in e.headers.items()}.get("retry-after", "30")) + 1
+                print(f"      (429: se espera {espera} s)", flush=True)
+                time.sleep(espera)
+                continue
+            raise ErrorHTTP(e.code, texto[:160]) from e
 
 
 def guardar(nombre: str, datos) -> None:
@@ -139,11 +175,13 @@ def rag() -> int:
     return 0 if acierto >= META_ACIERTO and silencio >= META_SILENCIO else 1
 
 
-def solicitudes(pausa: float, casos: set[str] | None = None) -> int:
-    from src.main import obtener_catalogo, obtener_llm, obtener_rag
-    from src.services.itinerario import generar_itinerario
+def solicitudes(pausa: float, casos: set[str] | None = None, url: str | None = None) -> int:
     from src.services.llm import ErrorLLM
-    llm, catalogo, cliente_rag, completo = obtener_llm(), obtener_catalogo(), obtener_rag(), cargar_catalogo()
+    completo = cargar_catalogo()
+    if url is None:
+        from src.main import obtener_catalogo, obtener_llm, obtener_rag
+        from src.services.itinerario import generar_itinerario
+        llm, catalogo, cliente_rag = obtener_llm(), obtener_catalogo(), obtener_rag()
     filas = []
     for i, c in enumerate(c for c in leer("solicitudes.jsonl") if not casos or c["id"] in casos):
         if i:
@@ -151,10 +189,14 @@ def solicitudes(pausa: float, casos: set[str] | None = None) -> int:
         s = SolicitudItinerario(**c["solicitud"])
         t0 = time.monotonic()
         try:
-            r = generar_itinerario(llm, s, catalogo, None, cliente_rag)
-        except ErrorLLM as e:
-            filas.append({"id": c["id"], "error": type(e).__name__, "fallas": [type(e).__name__]})
-            print(c["id"], "ERROR", type(e).__name__, flush=True)
+            if url is None:
+                r = generar_itinerario(llm, s, catalogo, None, cliente_rag)
+            else:
+                r = por_http(url, "/itinerario", s.model_dump(mode="json"), RespuestaItinerario)
+        except (ErrorLLM, ErrorHTTP) as e:
+            nombre = f"HTTP {e.estado}" if isinstance(e, ErrorHTTP) else type(e).__name__
+            filas.append({"id": c["id"], "error": nombre, "fallas": [nombre]})
+            print(c["id"], "ERROR", nombre, flush=True)
             continue
         fallas = revisar_solicitud(r, s, c["espera"], completo)
         acts = [a for d in r.dias for a in d.actividades]
@@ -179,22 +221,25 @@ def itinerario_base(catalogo: dict[str, Atractivo]) -> tuple[RespuestaItinerario
     return armar_itinerario(prop, s, catalogo), s
 
 
-def agente(pausa: float, casos: set[str] | None = None) -> int:
+def agente(pausa: float, casos: set[str] | None = None, url: str | None = None) -> int:
     import src.agente as ag
-    from src.main import obtener_catalogo_agente as obtener_catalogo, obtener_clima, obtener_llm, obtener_rag
+    from src.main import obtener_catalogo_agente as obtener_catalogo
     from src.services.llm import ErrorLLM
-    llm, catalogo, cliente_rag, clima = obtener_llm(), obtener_catalogo(), obtener_rag(), obtener_clima()
+    catalogo = obtener_catalogo()
     base, s = itinerario_base(catalogo)
     usadas: list[str] = []
     tokens: list[int] = []
-    original = llm.generar_con_herramientas
+    if url is None:
+        from src.main import obtener_clima, obtener_llm, obtener_rag
+        llm, cliente_rag, clima = obtener_llm(), obtener_rag(), obtener_clima()
+        original = llm.generar_con_herramientas
 
-    def medido(mensajes, herramientas):
-        r = original(mensajes, herramientas)
-        usadas.extend(x.nombre for x in r.datos.llamadas)
-        tokens.append((r.tokens_entrada or 0) + (r.tokens_salida or 0))
-        return r
-    llm.generar_con_herramientas = medido
+        def medido(mensajes, herramientas):
+            r = original(mensajes, herramientas)
+            usadas.extend(x.nombre for x in r.datos.llamadas)
+            tokens.append((r.tokens_entrada or 0) + (r.tokens_salida or 0))
+            return r
+        llm.generar_con_herramientas = medido
 
     filas = []
     for i, c in enumerate(c for c in leer("agente_casos.jsonl") if not casos or c["id"] in casos):
@@ -203,14 +248,25 @@ def agente(pausa: float, casos: set[str] | None = None) -> int:
         usadas.clear()
         tokens.clear()
         sol = SolicitudAgente(mensaje=c["mensaje"], itinerario=base, solicitud=s)
+        espera = dict(c["espera"])
         try:
-            r = ag.conversar(llm, sol, catalogo, cliente_rag, clima, ag.AlmacenPendientes(ttl_s=60))
-        except ErrorLLM as e:
-            filas.append({"id": c["id"], "escenario": c["escenario"], "error": type(e).__name__,
-                          "fallas": [type(e).__name__]})
-            print(c["id"], "ERROR", type(e).__name__, flush=True)
+            if url is None:
+                r = ag.conversar(llm, sol, catalogo, cliente_rag, clima, ag.AlmacenPendientes(ttl_s=60))
+            else:
+                r = por_http(url, "/agente", sol.model_dump(mode="json"), RespuestaAgente)
+                # Por HTTP no se ven las herramientas: se deducen de lo que dejaron en la respuesta.
+                usadas.extend(h for h, dejo in (("recalcular", r.cambios), ("buscar_fragmentos", r.fuentes)) if dejo)
+                if "consultar_clima" in espera.get("usa", []):
+                    espera["usa"] = [h for h in espera["usa"] if h != "consultar_clima"]
+                    print(f"      ({c['id']}: consultar_clima no se puede comprobar por HTTP; se omite esa condición)")
+                if r.confirmacion is not None:  # no dejar acciones pendientes en producción
+                    por_http(url, f"/agente/confirmar/{r.confirmacion.id}", {"aprobar": False}, RespuestaAgente)
+        except (ErrorLLM, ErrorHTTP) as e:
+            nombre = f"HTTP {e.estado}" if isinstance(e, ErrorHTTP) else type(e).__name__
+            filas.append({"id": c["id"], "escenario": c["escenario"], "error": nombre, "fallas": [nombre]})
+            print(c["id"], "ERROR", nombre, flush=True)
             continue
-        fallas = revisar_agente(r, list(usadas), c["espera"])
+        fallas = revisar_agente(r, list(usadas), espera)
         filas.append({"id": c["id"], "escenario": c["escenario"], "fallas": fallas, "estado": r.estado,
                       "vueltas": r.vueltas, "herramientas": list(usadas), "tokens": sum(tokens),
                       "cambios": r.cambios, "fuentes": [x.fuente for x in r.fuentes], "advertencias": r.advertencias,
@@ -220,8 +276,8 @@ def agente(pausa: float, casos: set[str] | None = None) -> int:
     validas = [f for f in filas if "error" not in f]
     if validas:
         print(f"vueltas: media {sum(f['vueltas'] for f in validas) / len(validas):.1f}, "
-              f"máximo {max(f['vueltas'] for f in validas)} (tope {ag.parametros().agente.max_iter}); "
-              f"tokens por caso: media {sum(f['tokens'] for f in validas) / len(validas):.0f}")
+              f"máximo {max(f['vueltas'] for f in validas)} (tope {ag.parametros().agente.max_iter})"
+              + ("" if url else f"; tokens por caso: media {sum(f['tokens'] for f in validas) / len(validas):.0f}"))
     guardar(SALIDA["agente"], filas)
     return 0
 
@@ -231,12 +287,21 @@ if __name__ == "__main__":
     ap.add_argument("modo", choices=["rag", "solicitudes", "agente"])
     ap.add_argument("--pausa", type=float, default=None, help="segundos entre casos (Groq gratuito: 8000 tokens/min)")
     ap.add_argument("--casos", default="", help="solo estos ids, separados por coma (p. ej. D1,D2)")
-    ap.add_argument("--salida", default=None, help="archivo de resultados (por defecto eval/resultados_<modo>.json)")
+    ap.add_argument("--salida", default=None,
+                    help="archivo de resultados (por defecto eval/resultados_<modo>.json; con --url, "
+                         "eval/resultados_produccion_<modo>.json)")
+    ap.add_argument("--url", default=None, help="evalúa contra la app desplegada en vez de en proceso")
     a = ap.parse_args()
     casos = {x.strip() for x in a.casos.split(",") if x.strip()} or None
     if a.modo == "rag":
+        if a.url:
+            ap.error("el modo rag no admite --url: mide el índice local")
         sys.exit(rag())
+    if a.url and not a.url.startswith(("http://", "https://")):
+        ap.error("--url debe empezar por http:// o https://")
     if a.salida:
         SALIDA[a.modo] = a.salida
-    sys.exit(solicitudes(a.pausa if a.pausa is not None else 30, casos) if a.modo == "solicitudes"
-             else agente(a.pausa if a.pausa is not None else 40, casos))
+    elif a.url:
+        SALIDA[a.modo] = f"resultados_produccion_{a.modo}.json"
+    sys.exit(solicitudes(a.pausa if a.pausa is not None else 30, casos, a.url) if a.modo == "solicitudes"
+             else agente(a.pausa if a.pausa is not None else 40, casos, a.url))
