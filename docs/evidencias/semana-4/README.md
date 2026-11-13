@@ -180,4 +180,10 @@ PASA  8. [confirmacion] POST /agente -> 200 en 0.5 s
 RESULTADO: 8/8 pasan · p95 14.3 s · más lento 14.3 s
 ```
 
-- **Observaciones del tribunal:** se anotan aquí después del turno (pendiente).
+- **Observaciones del tribunal:** al 12 de noviembre de 2026 el tribunal **todavía no entrega observaciones**, así que no
+  hay nada que corregir ni descartar. Cuando lleguen se registran en esta tabla, una fila por observación, con qué se
+  hizo (corregida con el commit, en curso o descartada con la razón):
+
+| Observación del tribunal | Qué se hizo | Estado |
+|---|---|---|
+| *(sin observaciones recibidas)* | | |
