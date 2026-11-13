@@ -35,7 +35,7 @@ async def ciclo_de_vida(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Planificador Turístico Zona Centro", version="0.4.2", lifespan=ciclo_de_vida)
+app = FastAPI(title="Planificador Turístico Zona Centro", version="0.5.0", lifespan=ciclo_de_vida)
 
 
 @lru_cache

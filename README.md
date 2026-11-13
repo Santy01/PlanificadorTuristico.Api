@@ -37,7 +37,7 @@ solicitudes 14/15 (la restante pasa corrida aparte), adversarias rechazadas 4/4,
 - **Las acciones pendientes del agente viven en memoria:** sirven con un solo proceso de uvicorn.
 - **El catálogo no distingue eventos con fecha** (p. ej. la Fiesta de las Flores y de las Frutas, en febrero): `recalcular`
   puede proponer uno fuera de temporada.
-- Muchos costos y duraciones del catálogo siguen `POR VERIFICAR`: se excluyen del total y se avisa.
+- **Catálogo:** los 60 atractivos que ve el modelo del itinerario están verificados (costos, duraciones y fuentes completos, 7 nov 2026). De los otros 79, que solo usa el agente, muchos costos siguen `POR VERIFICAR`: se excluyen del total y se avisa.
 
 ## Estructura
 

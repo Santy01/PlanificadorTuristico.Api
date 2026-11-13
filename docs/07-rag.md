@@ -56,7 +56,7 @@ Principio rector, el mismo de todo el proyecto: **el modelo propone, el código 
 
 **Por qué esta regla:** una prueba con el modelo real mostró que un fragmento sobre la Nariz del Diablo se citaba para Nizag y para unas cascadas, solo porque los nombraba de pasada. Es preferible perder cobertura (hoy 33 de 139 atractivos tienen fuente web) a respaldar con un texto que no corresponde.
 
-**Resultado actual:** 241 fragmentos indexados (139 de fichas y 102 web).
+**Resultado actual:** 251 fragmentos indexados (139 de fichas y 112 web), desde el catálogo verificado del 7 de noviembre de 2026 (antes: 241, con 102 web).
 
 ## 4. Embeddings
 
@@ -157,6 +157,13 @@ Los grupos se escribieron antes de mirar los puntajes. Se mide el mejor puntaje 
 
 Con E5 las similitudes salen altas y juntas: si se cambia el modelo de embeddings o se reindexa el corpus, hay que volver a correr la calibración.
 
+**Recalibración tras el catálogo verificado (7 nov 2026, 251 fragmentos).** Preguntas: igual (6/6 y 5/5 con 0.86).
+Solicitudes: el piso de 0.83 conserva 20/21 de la zona y corta 5/14 de fuera. La solicitud que queda debajo («natural,
+algo tranquilo y con poco presupuesto», 0.8292) puntúa por debajo de «receta de pizza» (0.8296): bajar el piso a 0.829
+sería ajustarlo a una diferencia de 0.0004, así que **se mantiene 0.83**. El costo es pequeño (esa solicitud sale sin
+citas) y, desde la Semana 4, lo ajeno a la zona lo detiene antes la regla de alcance. RAG con las 15 preguntas: 100 % de
+acierto y 100 % de silencio; recall 8/8.
+
 ## 10. Resumen: para qué sirve cada pieza
 
 | Pieza | Dónde | Para qué sirve |
@@ -174,7 +181,7 @@ Con E5 las similitudes salen altas y juntas: si se cambia el modelo de embedding
 
 ## 11. Limitaciones conocidas
 
-- Solo 33 de 139 atractivos tienen fuente web citable; el resto cita solo su ficha (que el prompt no ofrece como cita) o no tiene citas.
+- Solo 35 de 139 atractivos tienen fuente web citable (33 antes del catálogo verificado); el resto cita solo su ficha (que el prompt no ofrece como cita) o no tiene citas.
 - La calidad de las citas se midió por validez de id; falta revisión manual de una muestra del corpus y de las citas.
 - Una sola corrida por modo con 10 entradas; la variación del modelo no está medida.
 - La entrada de 4 días y 3 intereses falló por errores de Groq (400 y 429) con y sin RAG.
