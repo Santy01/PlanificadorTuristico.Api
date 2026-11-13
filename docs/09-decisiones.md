@@ -1,4 +1,22 @@
-## ADR · Agente de alcance controlado
+# Decisiones de arquitectura (ADR)
+
+*Grupo 4 · Planificador turístico de la zona centro del Ecuador · versión 0.5.0 · noviembre de 2026*
+
+Cada decisión tiene su contexto, lo que se decidió, por qué y qué costó. La de la plataforma de despliegue está aparte
+en [adr/0003-plataforma-despliegue.md](adr/0003-plataforma-despliegue.md).
+
+| # | Decisión | Entrega | Dónde vive |
+|---|---|---|---|
+| 1 | Agente de alcance controlado: lista cerrada, tope y confirmación humana | 3 | `src/agente.py`, `src/tools/`, `config/parametros.yaml` |
+| 2 | Proveedor de respaldo (Gemini) ante la caída o la cuota de Groq | 4 | `src/config.py`, `src/services/llm.py` |
+| 3 | Límite de peticiones por IP con 429 | 4 | `src/limites.py`, `config/parametros.yaml` |
+| 4 | Frontend y API en el mismo dominio, repartidos por ruta en Traefik | 4 | `docker-compose.yml`, `tests/test_despliegue.py` |
+| 5 | Catálogo verificado por el equipo e importación segura desde Excel | 4 | `data/catalogo/`, `scripts/importar_catalogo.py`, `tests/test_catalogo_datos.py` |
+| 6 | Versiones fijas, índice del RAG por volumen y un solo flujo de Gitleaks | 4 | `Dockerfile`, `requirements.txt`, `.github/workflows/ci-cd.yml` |
+
+---
+
+## ADR 1 · Agente de alcance controlado
 
 *Entrega 3 · Grupo 4 · Planificador turístico de la zona centro del Ecuador · noviembre de 2026*
 *Código: `src/agente.py`, `src/tools/`, `config/parametros.yaml`*
@@ -76,3 +94,90 @@ puede cambiarlas.
   `recalcular` decide con reglas deterministas.
 - **Confirmación también para `recalcular`:** el cambio es visible, reversible (se puede volver a pedir) y no sale del
   sistema. Una confirmación por cada cambio haría la conversación más lenta sin reducir riesgo.
+
+---
+
+## ADR 2 · Proveedor de respaldo (Gemini)
+
+*Entrega 4 · Código: `src/config.py`, `src/services/llm.py` · Evidencia: [semana 4 §3](evidencias/semana-4/README.md)*
+
+**Contexto.** El plan gratuito de Groq limita los tokens por minuto (8 000) y puede fallar. Una caída o un 429 sin
+respaldo dejaba al visitante sin itinerario justo en la demostración (riesgo R1 de [riesgos.md](riesgos.md)).
+
+**Decisión.** Un segundo proveedor, Gemini (`gemini-3.5-flash`), con el mismo cliente `ClienteLLM`. Un error definitivo
+(401, 404, 400) pasa directo al respaldo sin reintentos; un error pasajero (429, 5xx, tiempo agotado) se reintenta con
+espera creciente y respeta `Retry-After`, salvo que pida más de 20 s, caso en que también pasa al respaldo. Si fallan los
+dos, la API responde **503 con un mensaje claro** y nunca el error crudo del proveedor. Cambiar de modelo es cambiar
+`GEMINI_MODEL`, sin tocar el código.
+
+**Por qué.** Se probó con proveedores reales y hallaron dos problemas que los dobles no veían: `gemini-2.5-flash` ya no
+estaba disponible (404) y Gemini 3 exige devolver la `thought_signature` en la vuelta siguiente del agente; el respaldo
+a mitad de una conversación se corrigió con una firma ficticia documentada por Google para historiales de otro origen.
+
+**Consecuencias.** Con Groq inválido responde Gemini en unos 8 a 13 s (Groq, ~1 s), dentro del p95 de 20 s. El plan
+gratuito de Gemini también se satura: con los dos agotados, el 503 es el comportamiento esperado. En el streaming, la
+respuesta final todavía no indica qué proveedor respondió.
+
+## ADR 3 · Límite de peticiones por IP
+
+*Entrega 4 · Código: `src/limites.py`, `config/parametros.yaml` (`limites`) · Pruebas: `tests/test_limites.py`*
+
+**Contexto.** Cada itinerario gasta ~6 000 tokens de la cuota gratuita: una sola persona o un script puede agotarla para
+todos (OWASP LLM10, consumo sin límite).
+
+**Decisión.** Ventana deslizante de 60 s por IP: 10 solicitudes de itinerario y 20 mensajes del agente por minuto; al
+pasarse, **429 con `Retry-After`**. La IP real se toma de `X-Forwarded-For` según los proxies de confianza
+(`proxies_confiables: 1`, Traefik): las entradas anteriores las puede escribir el propio cliente.
+
+**Consecuencias.** Vive en memoria: vale con un solo proceso de uvicorn, como en `docker-compose.yml`; con varios
+procesos habría que pasarlo a Redis. Está probado contra la URL con el caso del 429 de `tests/smoke.py`.
+
+## ADR 4 · Frontend y API en el mismo dominio
+
+*Entrega 4 · Código: `docker-compose.yml` · Pruebas: `tests/test_despliegue.py`*
+
+**Contexto.** El frontend (Angular, repositorio `PlanificadorTuristico.Web`) y la API necesitan hablarse sin configurar
+CORS ni exponer dos dominios.
+
+**Decisión.** Un solo dominio, `planificador.bhsolutions.cloud`. Traefik da a la API solo sus rutas (`/itinerario`,
+`/agente`, `/health`, `/docs`, `/openapi.json`, `/redoc`) con prioridad 100, y todo lo demás va al contenedor del
+frontend (prioridad 1). La API no publica puertos: Traefik llega a ella por la red `traefik_proxy`.
+
+**Consecuencias.** Si se agrega un endpoint hay que sumarlo a la regla de Traefik; `tests/test_despliegue.py` lo comprueba
+y evita que quede sin ruta. Los dos despliegues son independientes: cada repositorio tiene su pipeline.
+
+## ADR 5 · Catálogo verificado e importación segura desde Excel
+
+*Entrega 4 · Código: `scripts/importar_catalogo.py`, `tests/test_catalogo_datos.py` · Reporte: [importación del 7 nov](evidencias/catalogo/importacion-reducido_verificado_2026-11-07.md)*
+
+**Contexto.** El equipo verificó a mano 60 atractivos (costos, duraciones y fuentes). Excel dañó el archivo: cambió el
+separador, la codificación (CP850) y las coordenadas.
+
+**Decisión.** En vez de corregirlo a mano, un importador con reglas explícitas que rearma las coordenadas, no deja que un
+vacío borre datos existentes y escribe un reporte de cada cambio (60 filas, 0 `POR VERIFICAR`). Las pruebas del CI
+impiden que vuelva a pasar.
+
+**Consecuencias.** El modelo del itinerario ve solo esos 60 (`atractivos_reducido.csv`); el agente usa los 139, y en los
+79 restantes muchos costos siguen `POR VERIFICAR` (se excluyen del total y se avisa). Cambiar el catálogo obliga a
+reconstruir el corpus y el índice (251 fragmentos) y a recalibrar el piso de similitud ([RAG §9](07-rag.md)): tras el
+cambio se mantuvo 0.83 en vez de ajustarlo a una diferencia de 0.0004.
+
+## ADR 6 · Versiones fijas, índice del RAG por volumen y un solo flujo de Gitleaks
+
+*Entrega final · Código: `Dockerfile`, `requirements.txt`, `.github/workflows/ci-cd.yml`*
+
+**Contexto.** Tres observaciones de la revisión: `torch` y las dependencias sin versión, la imagen base sin digest, dos
+workflows que revisaban secretos, y un índice que el despliegue no actualizaba.
+
+**Decisión.**
+- **Versiones fijas:** `requirements.txt` con `==`, `torch` con versión exacta y `python:3.12-slim` con su digest, para
+  que la imagen de hoy sea la misma dentro de seis meses y una dependencia nueva no rompa el despliegue sin aviso.
+- **Un solo flujo de Gitleaks:** el job `secretos` de `ci-cd.yml` (historial completo); se eliminó `secretos.yml`, que
+  hacía lo mismo.
+- **Índice del RAG por volumen, a mano:** el corpus original (`data/raw`) no se versiona (son páginas descargadas), así
+  que el índice no se puede reconstruir en el pipeline ni va en la imagen. Se construye en el equipo del que lo genera y se
+  sube a `/opt/planificador/data/vectorstore`. Es el riesgo **R9**; lo mitigan `/health`, que informa cuántos fragmentos
+  tiene el índice, y que sin índice la API siga funcionando, sin citas, avisándolo.
+
+**Consecuencias.** Subir una dependencia es una decisión explícita (cambiar la versión y volver a pasar las pruebas).
+Actualizar el corpus exige un paso manual, documentado en [08-despliegue-docker.md](08-despliegue-docker.md).

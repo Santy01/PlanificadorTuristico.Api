@@ -1,5 +1,6 @@
 # Imagen de la API. No contiene secretos: el .env se inyecta al ejecutar (docker-compose.yml, env_file).
-FROM python:3.12-slim
+# Imagen base fijada por digest (python:3.12-slim del 12 nov 2026, Python 3.12.16): el mismo build da la misma base.
+FROM python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -9,7 +10,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # torch solo CPU (el VPS no tiene GPU): la imagen pesa ~1 GB menos que con la versión CUDA
-RUN pip install torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 

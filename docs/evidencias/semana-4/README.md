@@ -85,12 +85,14 @@ Resultado con Gemini real como proveedor:
 Gemini tarda unos 11–13 s por itinerario (Groq, ~1 s): sirve como respaldo dentro del p95 de 20 s de RNF-01. En el
 streaming la respuesta final todavía no indica qué proveedor respondió.
 
-**Pruebas:** 214 pasan, con 95 % de cobertura.
+**Pruebas:** 234 pasan, con 95 % de cobertura.
 
 ## 4. Pruebas funcionales (misión 6)
 
-`tests/smoke.py` llama a la API como el frontend, con el modelo real y sin claves en el cliente. Tiene 8 casos de los
-5 tipos del taller, más la confirmación humana: la acción pendiente se rechaza al final, así que nunca se envía nada.
+`tests/smoke.py` llama a la API como el frontend, con el modelo real y sin claves en el cliente. La primera versión
+tenía 8 casos de los 5 tipos del taller, más la confirmación humana (la acción pendiente se rechaza al final, así que
+nunca se envía nada); hoy tiene 23 (ver [docs/08-pruebas.md](../../08-pruebas.md)). Las corridas de esta sección son
+las de las 8 primeras pruebas.
 Corre a mano y, desde la 0.4.0, en el pipeline después de cada despliegue.
 
 Primera corrida, contra la API local (Groq como principal, Gemini como respaldo):
@@ -109,8 +111,11 @@ PASA  8. [confirmacion] POST /agente -> 200 en 8.0 s
 RESULTADO: 8/8 pasan · p95 8.0 s · más lento 8.0 s
 ```
 
-Los casos 4 y 5 tardan 0.0 s porque los rechaza la regla de alcance sin llamar al modelo. **Pendiente:** correrlo
-contra producción después de liberar la 0.4.0.
+Los casos 4 y 5 tardan 0.0 s porque los rechaza la regla de alcance sin llamar al modelo. Contra producción se corrió
+al liberar la 0.4.0 (§5: 7/8 la primera vez y 8/8 repetida) y en cada despliegue del pipeline (§6). Después de la
+observación del docente de que 8 casos y una sola inyección eran pocos, la suite creció a **23 casos** (más
+inyecciones, el agente fuera de alcance, la confirmación de un solo uso y el 429); su resultado contra producción está en
+[docs/08-pruebas.md](../../08-pruebas.md).
 
 ## 5. Liberación 0.4.0 en producción
 
