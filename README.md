@@ -195,9 +195,10 @@ python eval/evaluar.py agente --url https://planificador.bhsolutions.cloud --pau
 9. [Flujo automatizado](docs/10-automatizacion.md)
 10. [Plan de calidad](docs/11-plan-de-calidad.md)
 11. [Declaración de uso de IA y aportes](docs/12-declaracion-uso-ia.md)
-12. [Matriz de riesgos](docs/riesgos.md) · [ADR-0003: plataforma de despliegue](docs/adr/0003-plataforma-despliegue.md)
-13. Evidencias: [Semana 1](docs/evidencias/semana-1/README.md) · [Semana 2](docs/evidencias/semana-2/README.md) · [Semana 3](docs/evidencias/semana-3/README.md) · [Evaluación de la Entrega 3](docs/evidencias/semana-3/evaluacion-entrega3.md) · [Semana 4](docs/evidencias/semana-4/README.md) · [Evaluación contra producción](docs/evidencias/semana-4/evaluacion-produccion.md)
-14. Presentación de la sustentación: [PDF](docs/sustentacion-grupo4.pdf)
+12. [Guía técnica y de defensa del proyecto](docs/13-guia-tecnica-y-defensa.md)
+13. [Matriz de riesgos](docs/riesgos.md) · [ADR-0003: plataforma de despliegue](docs/adr/0003-plataforma-despliegue.md)
+14. Evidencias: [Semana 1](docs/evidencias/semana-1/README.md) · [Semana 2](docs/evidencias/semana-2/README.md) · [Semana 3](docs/evidencias/semana-3/README.md) · [Evaluación de la Entrega 3](docs/evidencias/semana-3/evaluacion-entrega3.md) · [Semana 4](docs/evidencias/semana-4/README.md) · [Evaluación contra producción](docs/evidencias/semana-4/evaluacion-produccion.md)
+15. Presentación de la sustentación: [PDF](docs/sustentacion-grupo4.pdf)
 
 | Formulario | Resultado con mapa |
 |---|---|
